@@ -198,3 +198,39 @@ D006 — 2026-05-23T23:55:00Z
   - Grep verified: localStorage only in StorageService; console.* only in LoggerService.
   - npm run build passes (103ms, 53 modules).
 -------------------------------------------------------------
+-------------------------------------------------------------
+D007 — 2026-05-24T00:10:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: SubmissionService + Student flow + wire teacher SubmissionsPage
+
+  Files added: SubmissionService.js, SubmissionService.test.js (26 tests)
+  Files replaced: StudentDashboard.jsx, AvailableExamsPage.jsx, TakeExamPage.jsx,
+                  GradesPage.jsx, SubmissionsPage.jsx (teacher, re-wired)
+  Files updated: services/index.js (wired submissionService)
+  Commits: 9 conventional commits on dev branch.
+  Wall time: ~45 minutes.
+
+  Summary of work:
+  - SubmissionService: submitExam() enforces Published-only and single-submission-
+    per-(examId,studentId) constraints in the service layer. Double-submit throws
+    'Already submitted'. gradeSubmission() is an M1 field-update stub. Four query
+    methods cover all read patterns (by exam, by student, by pair).
+  - services/index.js: wired submissionService singleton (dep on mockApi + examService).
+  - StudentDashboard: counters (available/submitted/graded) via concurrent Promise.all
+    of getPublishedExams + getSubmissionsByStudent. Derives counts in JS.
+  - AvailableExamsPage: CRITICAL — uses getPublishedExams() (status filter in service),
+    then hides exams the student already submitted. Draft and Closed exams are never
+    shown to students.
+  - TakeExamPage: guards entry (Published + not-yet-submitted). MC questions render as
+    radio buttons; open-text as textarea. Auto-save draft to StorageService on each
+    answer change; cleared on successful submit (Nice-to-Have §5.2 implemented cleanly).
+    Warns on unanswered questions without blocking submission.
+  - GradesPage: joins submissions with exam titles in JS (Promise.all, no N+1).
+    Sorted most-recent-first. Shows grade/feedback or placeholders.
+  - SubmissionsPage (teacher): 2-call strategy (getExamsByTeacher + mockApi.get
+    submissions), filters and groups in JS. Exam sections sorted by submission count.
+  - 214/214 tests PASS (26 new SubmissionService tests + all 188 prior).
+  - Grep verified: localStorage only in StorageService (TakeExamPage draft save goes
+    via storage singleton — no direct localStorage calls); console.* only in LoggerService.
+  - npm run build passes (117ms, 54 modules).
+-------------------------------------------------------------
