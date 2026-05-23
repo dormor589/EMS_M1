@@ -1,0 +1,111 @@
+@startuml EMS_M1_UseCaseDiagram
+' EMS_M1 Use Case Diagram — reflects features implemented in D001-D007.
+' Source: docs/spec_brief.txt §15.2
+'
+' Notes on M1 scope:
+'   - Grade Submission: service stub exists (gradeSubmission()) but
+'     there is no teacher grading UI. Shown as <<M2>> to reflect reality.
+'   - Register is available to both Teacher and Student actors.
+
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseFontSize 12
+
+actor Teacher
+actor Student
+actor "Guest\n(Unauthenticated)" as Guest
+
+rectangle "Exam Management System — Milestone 1" {
+
+  ' ── Shared / Auth ─────────────────────────────────────────────────────────
+  package "Authentication" {
+    usecase "Register Account"    as UC_Register
+    usecase "Login"               as UC_Login
+    usecase "Logout"              as UC_Logout
+  }
+
+  ' ── Teacher Use Cases ────────────────────────────────────────────────────
+  package "Teacher Features" {
+    usecase "View Teacher Dashboard\n(counters: exams, status)" as UC_TDash
+    usecase "Create Exam\n(title, duration, questions)"         as UC_Create
+    usecase "Add Multiple-Choice Question"                       as UC_AddMC
+    usecase "Add Open-Text Question"                             as UC_AddOT
+    usecase "Edit Exam"                                          as UC_Edit
+    usecase "Publish Exam\n(Draft -> Published)"                 as UC_Publish
+    usecase "Close Exam\n(Published -> Closed)"                  as UC_Close
+    usecase "View My Exams\n(list with status)"                  as UC_ExamList
+    usecase "View Submissions\n(grouped by exam)"                as UC_ViewSubs
+    usecase "Grade Submission\n<<M2 - service stub only>>"       as UC_Grade
+  }
+
+  ' ── Student Use Cases ────────────────────────────────────────────────────
+  package "Student Features" {
+    usecase "View Student Dashboard\n(available / submitted / graded)" as UC_SDash
+    usecase "View Available Exams\n(Published only)"                    as UC_Available
+    usecase "Take Exam\n(answer questions)"                             as UC_Take
+    usecase "Answer Multiple-Choice\n(radio button selection)"          as UC_AnswerMC
+    usecase "Answer Open-Text\n(textarea input)"                        as UC_AnswerOT
+    usecase "Auto-Save Draft Answers\n(StorageService, per refresh)"    as UC_Draft
+    usecase "Submit Answers\n(one submission per exam)"                 as UC_Submit
+    usecase "View Grades and Feedback"                                  as UC_Grades
+  }
+
+}
+
+' ── Guest associations ───────────────────────────────────────────────────────
+Guest --> UC_Register
+Guest --> UC_Login
+
+' ── Teacher associations ─────────────────────────────────────────────────────
+Teacher --> UC_Login
+Teacher --> UC_Logout
+Teacher --> UC_TDash
+Teacher --> UC_Create
+Teacher --> UC_Edit
+Teacher --> UC_Publish
+Teacher --> UC_Close
+Teacher --> UC_ExamList
+Teacher --> UC_ViewSubs
+Teacher --> UC_Grade
+
+UC_Create ..> UC_AddMC : <<include>>
+UC_Create ..> UC_AddOT : <<include>>
+UC_Edit   ..> UC_AddMC : <<include>>
+UC_Edit   ..> UC_AddOT : <<include>>
+
+' ── Student associations ─────────────────────────────────────────────────────
+Student --> UC_Login
+Student --> UC_Logout
+Student --> UC_SDash
+Student --> UC_Available
+Student --> UC_Take
+Student --> UC_Submit
+Student --> UC_Grades
+
+UC_Take ..> UC_AnswerMC : <<include>>
+UC_Take ..> UC_AnswerOT : <<include>>
+UC_Take ..> UC_Draft    : <<include>>
+
+' ── State machine note ───────────────────────────────────────────────────────
+note right of UC_Publish
+  State machine enforced in ExamService:
+  Draft -> Published (publishExam)
+  Published -> Closed (closeExam)
+  Direct Draft -> Closed is rejected.
+end note
+
+note right of UC_Submit
+  SubmissionService guard:
+  Only Published exams accepted.
+  One submission per (examId, studentId).
+  Duplicate submit throws "Already submitted".
+end note
+
+note right of UC_Grade
+  M2: gradeSubmission() service method
+  exists as a stub. Teacher grading UI
+  and real grade entry are Milestone 2.
+end note
+
+@enduml
