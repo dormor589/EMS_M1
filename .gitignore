@@ -1,0 +1,30 @@
+# Node / Vite
+node_modules/
+dist/
+.vite/
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Coverage / test artifacts
+coverage/
+.nyc_output/
+
+# Session ids (worker UUIDs — not for sharing)
+.implementer_session_id
+.qa_session_id
