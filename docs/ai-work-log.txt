@@ -31,3 +31,30 @@ D001 — 2026-05-23T19:40:00Z
   - Wrote top-level README.md with install/run instructions.
   - Pushed dev branch to origin.
 -------------------------------------------------------------
+D002 — 2026-05-23T22:53:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Services 1/2 — ConfigService, LoggerService, StorageService, NotifyService
+
+  Files added: 4 service files + 4 Vitest test files + vitest.config.js
+  Commits: 6 conventional commits on dev branch.
+  Wall time: ~35 minutes.
+
+  Summary of work:
+  - Installed Vitest 4 + @vitest/ui + jsdom; configured vitest.config.js
+    (jsdom environment, globals: true, include src/**/__tests__/).
+  - ConfigService: central config singleton — getApiMode(), getStorageKeys(),
+    getDefaultExamStatus(), getExamStatusOptions(), getRoles(), getQuestionTypes().
+    All values as frozen module-level constants (no magic strings elsewhere).
+  - LoggerService: level-filtered logger (debug < info < warn < error, default info).
+    Sole file permitted to call console.* directly; wraps console.info/warn/error/debug.
+  - StorageService: localStorage wrapper (sole file permitted to access localStorage).
+    JSON round-trip, scoped clear() removes only ems_* keys, null on missing/malformed.
+  - NotifyService: in-memory subscriber pattern; success/error/warning emit
+    { type, message, id, timestamp } objects to registered listeners; subscribe()
+    returns unsubscribe fn.
+  - 51/51 tests PASS (ConfigService: 13, LoggerService: 13, StorageService: 14,
+    NotifyService: 11).
+  - Grep verified: localStorage calls only in StorageService.js;
+    console.* calls only in LoggerService.js.
+  - npm run build passes (81ms).
+-------------------------------------------------------------
