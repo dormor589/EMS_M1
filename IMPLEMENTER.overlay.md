@@ -87,13 +87,30 @@ or a step-by-step description of exercising the relevant flow in the dev server.
 
 **N/A for M1.** No numeric reproduction target exists.
 
-## Git workflow (per brief §10)
+## Git workflow (per brief §10 — STRICT, course-binding)
 
-- All commits go to the `dev` branch.
-- After your changes, stage + commit with a clear conventional-commit message
-  (e.g., `feat: add ExamService and Submission model`).
-- Do NOT push to `main`. Team Lead handles the dev → main PR at end of milestone.
-- DO push to `dev` after each D-task so the user sees incremental progress on GitHub.
+- All commits go to the `dev` branch. `main` is frozen until end-of-milestone PR.
+- **Multiple commits per D-task is REQUIRED, not optional.** Each module / service /
+  page / component group within a D-task gets its OWN commit. Do NOT squash a D-task
+  into a single "added everything for D00N" commit.
+  - Example for D002 (4 services): 4 commits, one per service, in any logical order:
+    - `feat: add ConfigService`
+    - `feat: add LoggerService`
+    - `feat: add StorageService`
+    - `feat: add NotifyService`
+  - Example for D006 (ExamService + 5 teacher pages): commits like
+    `feat: add ExamService`, then `feat: add TeacherDashboard page`,
+    `feat: add TeacherExamsPage`, etc.
+- **Documentation / comment-only updates commit SEPARATELY from implementation code**
+  whenever possible (course requirement). e.g., a `docs: ...` commit after a `feat: ...`
+  commit, rather than mixing them.
+- Use conventional-commit prefixes: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`.
+- Commit messages clearly describe WHAT module/feature, not "WIP" or "fixes".
+- After your last commit for the D-task: `git push origin dev` so the user sees progress on GitHub.
+- Do NOT push to `main`. Do NOT merge `dev → main`. Team Lead handles the final dev → main PR
+  at end of milestone, AFTER user approval.
+- The final Git history must clearly demonstrate modular, step-by-step development —
+  this is a graded acceptance criterion of the course.
 
 ## Documentation deliverables
 
