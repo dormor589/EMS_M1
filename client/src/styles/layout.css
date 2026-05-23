@@ -1,0 +1,111 @@
+/*
+ * layout.css — EMS_M1 baseline layout styles.
+ *
+ * Scope: ems-* BEM-style class names, no global resets.
+ * Mobile: flex nav wraps on narrow viewports.
+ *
+ * Source: docs/spec_brief.txt §5.2 Nice-to-have — basic responsive layout
+ */
+
+/* ── Page shell ────────────────────────────────────────────────────────────── */
+
+.ems-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.ems-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ── Navigation bar ────────────────────────────────────────────────────────── */
+
+.ems-nav {
+  background: #1e3a5f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  flex-wrap: wrap;           /* wraps gracefully on narrow viewports */
+}
+
+.ems-nav__brand {
+  margin-right: auto;        /* pushes links to the right */
+}
+
+.ems-nav__logo {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+
+.ems-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ems-nav__link {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ems-nav__link:hover,
+.ems-nav__link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.ems-nav__user {
+  color: #93c5fd;
+  font-size: 0.85rem;
+  padding: 0 0.5rem;
+}
+
+.ems-nav__role-tag {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.ems-nav__logout {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ems-nav__logout:hover {
+  background: #dc2626;
+}
+
+/* ── Responsive: stack nav on very narrow screens ─────────────────────────── */
+
+@media (max-width: 480px) {
+  .ems-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ems-nav__brand {
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
