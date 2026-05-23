@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { auth, examService, mockApi, notify } from '../../services/index.js';
 
 function SubmissionsPage() {
@@ -143,6 +143,7 @@ function SubmissionsPage() {
                         <th>Status</th>
                         <th>Grade</th>
                         <th>Answers</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -167,12 +168,20 @@ function SubmissionsPage() {
                           </td>
                           <td>
                             {s.grade !== null && s.grade !== undefined
-                              ? <strong>{s.grade}</strong>
+                              ? <strong>{s.grade} / 100</strong>
                               : <span style={{ color: '#94a3b8' }}>—</span>}
                           </td>
                           <td style={{ fontSize: '0.82rem', color: '#64748b' }}>
                             {(s.answers || []).length} answer
                             {(s.answers || []).length !== 1 ? 's' : ''}
+                          </td>
+                          <td>
+                            <Link
+                              to={`/teacher/submissions/${s.id}`}
+                              className="ems-btn ems-btn--secondary ems-btn--sm"
+                            >
+                              {s.status === 'graded' ? 'Review' : 'Grade'}
+                            </Link>
                           </td>
                         </tr>
                       ))}
