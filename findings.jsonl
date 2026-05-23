@@ -48,3 +48,6 @@
 {"timestamp":"2026-05-23T21:15:26Z","type":"senior_qa_dispatch","request_id":"D008","mode":"bg"}
 {"timestamp":"2026-05-24T00:35:00Z","type":"audit_complete","request_id":"D008","verdict":"PASS","audit_path":"audits/D008_qa_audit.md"}
 {"timestamp":"2026-05-23T21:18:23Z","type":"senior_verdict","request_id":"D008","verdict":"PASS","summary":"D008 PASS — docs + 4 diagrams delivered (resumed post-quota)."}
+{"timestamp":"2026-05-23T21:18:48Z","type":"senior_request_issued","request_id":"D009","summary":"D009 dispatched: Manual QA walkthrough + polish + user-gated PR"}
+{"timestamp":"2026-05-23T21:18:48Z","type":"senior_implement_dispatch","request_id":"D009","mode":"bg"}
+{"timestamp":"2026-05-24T01:45:00Z","type":"report_complete","request_id":"D009","report_path":"audits/D009_implementer_report.md"}
