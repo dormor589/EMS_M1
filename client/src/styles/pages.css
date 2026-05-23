@@ -344,6 +344,35 @@
   padding: 1rem 0;
 }
 
+/* ── Submission detail ───────────────────────────────────────────────────── */
+
+/* Error variant for the banner used on submission-not-found. */
+.ems-form__banner--error {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+/* Two-column definition list for the submission header. */
+.ems-detail-grid {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+
+.ems-detail-grid dt {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.85rem;
+  padding-top: 2px;
+}
+
+.ems-detail-grid dd {
+  margin: 0;
+  color: #1e293b;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
