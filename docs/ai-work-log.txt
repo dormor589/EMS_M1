@@ -58,3 +58,34 @@ D002 — 2026-05-23T22:53:00Z
     console.* calls only in LoggerService.js.
   - npm run build passes (81ms).
 -------------------------------------------------------------
+D003 — 2026-05-23T23:07:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Services 2/2 — MockApiService + seed data + entity models
+
+  Files added: 9 new files (5 models, 1 seedData, 1 MockApiService, 1 services/index.js,
+               2 test files); 2 files updated (App.jsx, Question.js error message fix).
+  Commits: 6 conventional commits on dev branch.
+  Wall time: ~40 minutes.
+
+  Demo credentials (M1 mock auth — password plain-text, no hashing until M2):
+    Teacher  — email: teacher@ems.dev    password: password
+    Student  — email: student@ems.dev    password: password
+
+  Seed data (hard-coded UUIDs, deterministic):
+    Published exam: "Introduction to Web Development" — 2 questions (1 MC, 1 open-text)
+    Draft exam:     "Advanced JavaScript Concepts (Draft)" — 1 open-text question
+    Submissions:    empty array (students take exam live in D004+)
+
+  Summary of work:
+  - models/util.js: generateId() wrapping crypto.randomUUID() with fallback.
+  - User, Question, Answer models: required-field + value validation, toJSON/fromJSON.
+  - Exam, Submission models: same pattern; questions/answers stored as plain objects.
+  - data/seedData.js: getSeedData() returns deterministic plain-object seed.
+  - MockApiService: constructor-injected (storage, config, logger); 7 async methods
+    (seedIfEmpty, get, getById, post, put, delete, clear); Promises for M2 compat.
+  - services/index.js: DI root; re-exports D002 singletons; creates mockApi wired singleton.
+  - App.jsx: useEffect → seedIfEmpty on mount; shows 'mock data seeded' once ready.
+  - 106/106 tests PASS (51 D002 + 35 model + 22 MockApiService - overlap).
+  - Grep verified: localStorage and console.* constraints still clean.
+  - npm run build passes (87ms, 24 modules).
+-------------------------------------------------------------
