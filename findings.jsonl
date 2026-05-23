@@ -2,3 +2,9 @@
 {"timestamp":"2026-05-23T19:35:52Z","type":"senior_request_issued","request_id":"D001","summary":"D001 dispatched: Project scaffold + dev branch + JS/TS decision"}
 {"timestamp":"2026-05-23T19:35:52Z","type":"senior_implement_dispatch","request_id":"D001","mode":"fg"}
 {"timestamp":"2026-05-23T19:42:00Z","type":"report_complete","request_id":"D001","report_path":"audits/D001_implementer_report.md"}
+{"timestamp":"2026-05-23T19:42:59Z","type":"senior_qa_dispatch","request_id":"D001","mode":"fg"}
+{"timestamp":"2026-05-23T19:45:00Z","type":"audit_complete","request_id":"D001","verdict":"PASS","audit_path":"audits/D001_qa_audit.md"}
+{"timestamp":"2026-05-23T19:46:35Z","type":"senior_verdict","request_id":"D001","verdict":"PASS","summary":"D001 PASS. 2 MINOR (Vite version typo in README, commit-msg/content cosmetic mismatch) — both waived as documentation-quality, non-blocking; can be addressed in D009 polish."}
+{"timestamp":"2026-05-23T19:47:26Z","type":"senior_request_issued","request_id":"D002","summary":"D002 dispatched: Services 1/2 (Config, Logger, Storage, Notify)"}
+{"timestamp":"2026-05-23T19:47:26Z","type":"senior_implement_dispatch","request_id":"D002","mode":"fg"}
+{"timestamp":"2026-05-23T22:54:00Z","type":"report_complete","request_id":"D002","report_path":"audits/D002_implementer_report.md"}
