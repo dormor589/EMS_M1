@@ -255,3 +255,21 @@ D008 — 2026-05-24T01:00:00Z
   Each artifact was committed separately per overlay requirement.
   Total docs: commits on dev branch.
 -------------------------------------------------------------
+-------------------------------------------------------------
+D009 — 2026-05-24T01:45:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Manual QA walkthrough, §12 acceptance criteria cross-check, polish.
+
+  Manual QA checklist (§16): 13/13 PASS.
+  Acceptance criteria (§12): 12/12 PASS.
+  npm run build: PASS — 54 modules, 150ms, 0 warnings.
+  Final test count: 214/214 PASS (11 test files, 1.72s).
+  Polish fixes: NONE required — no FAILs found.
+  Wall time: ~30 minutes.
+
+  Files added:
+    docs/manual_qa_checklist.txt   (§16 + §12 annotated results, plain text)
+
+  Milestone 1 is ready for dev -> main PR.
+  Awaiting user approval before Team Lead opens PR.
+-------------------------------------------------------------
