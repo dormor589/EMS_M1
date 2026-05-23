@@ -193,7 +193,9 @@ class AuthService {
    */
   async getUserById(id) {
     if (!id) throw new Error('AuthService.getUserById: "id" is required');
-    return this._mockApi.getById('users', id);
+    const user = await this._mockApi.getById('users', id);
+    this._logger.info('AuthService.getUserById: id=%s found=%s', id, !!user);
+    return user;
   }
 }
 
