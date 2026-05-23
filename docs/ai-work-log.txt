@@ -273,3 +273,27 @@ D009 — 2026-05-24T01:45:00Z
   Milestone 1 is ready for dev -> main PR.
   Awaiting user approval before Team Lead opens PR.
 -------------------------------------------------------------
+-------------------------------------------------------------
+D010 — 2026-05-24T02:15:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Minimal teacher submission review + grading UI (user-approved scope addition)
+
+  Wall time: ~35 minutes.
+
+  Files added:
+    client/src/pages/teacher/SubmissionDetailPage.jsx   (new page, 256 lines)
+
+  Files modified:
+    client/src/services/SubmissionService.js            (+getSubmissionById method)
+    client/src/services/AuthService.js                  (+getUserById method)
+    client/src/pages/teacher/SubmissionsPage.jsx        (+Grade column + Grade/Review links)
+    client/src/app/routes.jsx                           (+/teacher/submissions/:id route)
+    client/src/styles/pages.css                         (+ems-detail-grid, ems-form__banner--error)
+    client/src/services/__tests__/SubmissionService.test.js  (+4 getSubmissionById tests)
+    client/src/services/__tests__/AuthService.test.js        (+3 getUserById tests)
+
+  Tests: 221/221 PASS (7 new; cumulative from 214).
+  npm run build: PASS (55 modules, 0 warnings).
+  GradesPage sanity: already renders grade + feedback correctly; no changes needed.
+  NavigationMenu "Submissions" link: unchanged, still routes to /teacher/submissions.
+-------------------------------------------------------------
