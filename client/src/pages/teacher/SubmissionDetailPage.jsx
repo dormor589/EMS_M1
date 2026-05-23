@@ -308,7 +308,7 @@ function SubmissionDetailPage() {
           )}
 
           <div className="ems-form__group">
-            <label className="ems-form__group" htmlFor="grade-input">
+            <label className="ems-form__label" htmlFor="grade-input">
               Grade (0–100)
             </label>
             <input
@@ -326,7 +326,7 @@ function SubmissionDetailPage() {
           </div>
 
           <div className="ems-form__group">
-            <label className="ems-form__group" htmlFor="feedback-input">
+            <label className="ems-form__label" htmlFor="feedback-input">
               Feedback (optional)
             </label>
             <textarea
