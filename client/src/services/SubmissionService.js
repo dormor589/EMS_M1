@@ -155,6 +155,31 @@ class SubmissionService {
     return all.find((s) => s.examId === examId && s.studentId === studentId) || null;
   }
 
+  // ── Single-record lookup ──────────────────────────────────────────────────────
+
+  /**
+   * Find a single submission by its ID, or null if not found.
+   *
+   * Thin wrapper around MockApiService.getById, exposed here so page components
+   * depend only on SubmissionService (not MockApi directly).
+   *
+   * @param {string} id - Submission ID.
+   * @returns {Promise<object|null>}
+   * @throws {Error} if id is missing.
+   *
+   * Source: docs/spec_brief.txt §5.1 — Teacher: review submissions
+   */
+  async getSubmissionById(id) {
+    if (!id) throw new Error('SubmissionService.getSubmissionById: "id" is required');
+    const record = await this._mockApi.getById('submissions', id);
+    this._logger.info(
+      'SubmissionService.getSubmissionById: id=%s found=%s',
+      id,
+      !!record
+    );
+    return record ?? null;
+  }
+
   // ── Grading (M1 stub — full UI in M2) ────────────────────────────────────────
 
   /**

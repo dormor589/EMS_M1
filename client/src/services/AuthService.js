@@ -176,6 +176,25 @@ class AuthService {
     const user = this.getCurrentUser();
     return user !== null && user.role === 'student';
   }
+
+  /**
+   * Fetch a user record by their ID, or null if not found.
+   *
+   * Thin wrapper around MockApiService.getById so page components
+   * don't need to import MockApi directly for user lookups.
+   *
+   * Used by SubmissionDetailPage to display the submitting student's name.
+   *
+   * @param {string} id - User ID.
+   * @returns {Promise<object|null>}
+   * @throws {Error} if id is missing.
+   *
+   * Source: docs/spec_brief.txt §5.1 — Teacher: review submissions (view student name)
+   */
+  async getUserById(id) {
+    if (!id) throw new Error('AuthService.getUserById: "id" is required');
+    return this._mockApi.getById('users', id);
+  }
 }
 
 export default AuthService;
