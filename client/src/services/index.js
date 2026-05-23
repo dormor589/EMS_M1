@@ -11,6 +11,7 @@
  *   → mockApi (storage, config, logger)
  *   → auth (mockApi, storage, config, logger)
  *   → examService (mockApi, config, logger)
+ *   → submissionService (mockApi, examService, config, logger)
  *
  * Source: docs/spec_brief.txt §8 — Services and Responsibilities
  */
@@ -19,9 +20,10 @@ import config  from './ConfigService.js';
 import logger  from './LoggerService.js';
 import storage from './StorageService.js';
 import notify  from './NotifyService.js';
-import MockApiService from './MockApiService.js';
-import AuthService    from './AuthService.js';
-import ExamService    from './ExamService.js';
+import MockApiService    from './MockApiService.js';
+import AuthService       from './AuthService.js';
+import ExamService       from './ExamService.js';
+import SubmissionService from './SubmissionService.js';
 
 export { config, logger, storage, notify };
 
@@ -42,3 +44,9 @@ export const auth = new AuthService(mockApi, storage, config, logger);
  * @type {ExamService}
  */
 export const examService = new ExamService(mockApi, config, logger);
+
+/**
+ * SubmissionService singleton — student submit + teacher query + grading stub.
+ * @type {SubmissionService}
+ */
+export const submissionService = new SubmissionService(mockApi, examService, config, logger);
