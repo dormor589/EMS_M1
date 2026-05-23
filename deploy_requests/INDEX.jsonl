@@ -1,0 +1,2 @@
+{"id": 1, "title": "Project scaffold + dev branch + JS/TS decision", "file": "D001.md", "status": "PASS", "date": "2026-05-23", "risk": "HIGH", "tier": 3}
+{"id":2,"title":"Services 1/2: Config, Logger, Storage, Notify","file":"D002.md","status":"active","date":"2026-05-23","risk":"HIGH","tier":3}
