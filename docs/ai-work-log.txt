@@ -123,3 +123,41 @@ D004 — 2026-05-23T23:20:00Z
   - Grep verified: localStorage + console.* constraints still clean.
   - npm run build passes (111ms, 37 modules).
 -------------------------------------------------------------
+-------------------------------------------------------------
+D005 — 2026-05-23T23:30:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Role-based MainLayout + NavigationMenu + route guards
+
+  Files added: MainLayout.jsx (replaced placeholder), NavigationMenu.jsx (replaced
+    placeholder), ProtectedRoute.jsx, layout.css, NotFoundPage.jsx, routes.jsx
+    (replaced D004 minimal scaffold), App.jsx (simplified), test-setup.js,
+    vitest.config.js (updated), NavigationMenu.test.jsx, ProtectedRoute.test.jsx.
+  Commits: 7 conventional commits on dev branch.
+  Wall time: ~40 minutes.
+
+  Summary of work:
+  - Installed @testing-library/react + @testing-library/jest-dom + user-event;
+    updated vitest.config.js to include .jsx tests and load test-setup.js.
+  - MainLayout: NavigationMenu + <main><Outlet /></main> shell.
+  - NavigationMenu: re-reads auth.getCurrentUser() on each location change via
+    useEffect([pathname]); three visual states: unauthed/teacher/student.
+    Teacher links: Dashboard, My Exams, New Exam, Submissions, Logout.
+    Student links: Dashboard, Available Exams, Grades, Logout.
+  - ProtectedRoute: no user → Navigate /login; wrong role → Navigate to own home;
+    matching role → render children.
+  - routes.jsx: full tree with all 9 page routes nested under MainLayout;
+    LandingRedirect at '/' dispatches by role; NotFoundPage catch-all.
+  - App.jsx: simplified to just BrowserRouter + AppRoutes + seed-on-mount;
+    no more prop drilling (NavigationMenu owns its auth state).
+  - layout.css: dark navy nav bar, centered content area, responsive flex wrap.
+  - 150/150 tests PASS (24 new: 14 NavigationMenu + 8 ProtectedRoute + 2 config).
+  - Grep verified: localStorage + console.* constraints clean.
+  - npm run build passes (83ms, 51 modules).
+
+  Route guard behaviour (verified in tests):
+  - /teacher/exams as student → /student
+  - /teacher/exams as unauthed → /login
+  - / as teacher → /teacher
+  - / as student → /student
+  - / as unauthed → /login
+-------------------------------------------------------------
