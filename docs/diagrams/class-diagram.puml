@@ -1,0 +1,218 @@
+@startuml EMS_M1_ClassDiagram
+' EMS_M1 Class Diagram — reflects actual code as built in D001-D007.
+' Source: docs/spec_brief.txt §15.3
+' Entities: User, Exam, Question, Submission, Answer
+' Services: ConfigService, LoggerService, StorageService, NotifyService,
+'           MockApiService, AuthService, ExamService, SubmissionService
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+' ============================================================
+' ENTITY CLASSES
+' ============================================================
+
+package "Entities (client/src/models/)" {
+
+  class User {
+    +id : String
+    +name : String
+    +email : String
+    +password : String
+    +role : String
+    --
+    +toJSON() : Object
+    +{static} fromJSON(obj) : User
+  }
+
+  class Exam {
+    +id : String
+    +title : String
+    +description : String
+    +durationMinutes : Number
+    +status : String
+    +createdBy : String
+    +questions : Object[]
+    +createdAt : String
+    --
+    +toJSON() : Object
+    +{static} fromJSON(obj) : Exam
+  }
+
+  class Question {
+    +id : String
+    +examId : String
+    +type : String
+    +text : String
+    +options : String[]
+    +correctAnswer : any
+    +points : Number
+    --
+    +toJSON() : Object
+    +{static} fromJSON(obj) : Question
+  }
+
+  class Submission {
+    +id : String
+    +examId : String
+    +studentId : String
+    +answers : Object[]
+    +status : String
+    +grade : Number|null
+    +feedback : String
+    +submittedAt : String
+    --
+    +toJSON() : Object
+    +{static} fromJSON(obj) : Submission
+  }
+
+  class Answer {
+    +questionId : String
+    +value : any
+    --
+    +toJSON() : Object
+    +{static} fromJSON(obj) : Answer
+  }
+
+}
+
+' ============================================================
+' SERVICE CLASSES
+' ============================================================
+
+package "Services (client/src/services/)" {
+
+  class ConfigService {
+    +getApiMode() : String
+    +getStorageKeys() : Object
+    +getDefaultExamStatus() : String
+    +getExamStatusOptions() : String[]
+    +getRoles() : String[]
+    +getQuestionTypes() : String[]
+  }
+
+  class LoggerService {
+    -level : String
+    --
+    +info(msg, ...args) : void
+    +warn(msg, ...args) : void
+    +error(msg, ...args) : void
+    +debug(msg, ...args) : void
+    +setLevel(level) : void
+    +getLevel() : String
+  }
+
+  class StorageService {
+    +get(key) : any
+    +set(key, value) : void
+    +remove(key) : void
+    +clear() : void
+    +has(key) : Boolean
+  }
+
+  class NotifyService {
+    -listeners : Function[]
+    --
+    +success(message) : void
+    +error(message) : void
+    +warning(message) : void
+    +subscribe(listener) : Function
+    +listenerCount() : Number
+  }
+
+  class MockApiService {
+    -storage : StorageService
+    -config : ConfigService
+    -logger : LoggerService
+    --
+    +seedIfEmpty() : Promise<void>
+    +get(collection) : Promise<Object[]>
+    +getById(collection, id) : Promise<Object|null>
+    +post(collection, record) : Promise<Object>
+    +put(collection, id, record) : Promise<Object>
+    +delete(collection, id) : Promise<void>
+    +clear(collection) : Promise<void>
+  }
+
+  class AuthService {
+    -mockApi : MockApiService
+    -storage : StorageService
+    -config : ConfigService
+    -logger : LoggerService
+    --
+    +login(email, password) : Promise<User>
+    +register(data) : Promise<User>
+    +logout() : void
+    +getCurrentUser() : User|null
+    +isAuthenticated() : Boolean
+    +isTeacher() : Boolean
+    +isStudent() : Boolean
+  }
+
+  class ExamService {
+    -mockApi : MockApiService
+    -config : ConfigService
+    -logger : LoggerService
+    --
+    +getAllExams() : Promise<Object[]>
+    +getPublishedExams() : Promise<Object[]>
+    +getExamsByTeacher(teacherId) : Promise<Object[]>
+    +getExamById(id) : Promise<Object|null>
+    +createExam(data) : Promise<Object>
+    +updateExam(id, partial) : Promise<Object>
+    +publishExam(id) : Promise<Object>
+    +closeExam(id) : Promise<Object>
+    +deleteExam(id) : Promise<void>
+  }
+
+  class SubmissionService {
+    -mockApi : MockApiService
+    -examService : ExamService
+    -config : ConfigService
+    -logger : LoggerService
+    --
+    +submitExam(data) : Promise<Object>
+    +getSubmissionsByExam(examId) : Promise<Object[]>
+    +getSubmissionsByStudent(studentId) : Promise<Object[]>
+    +getSubmissionByExamAndStudent(examId, studentId) : Promise<Object|null>
+    +gradeSubmission(id, data) : Promise<Object>
+  }
+
+}
+
+' ============================================================
+' ENTITY RELATIONSHIPS
+' ============================================================
+
+User "1" --> "0..*" Exam       : creates\n(createdBy = user.id)
+User "1" --> "0..*" Submission : submits\n(studentId = user.id)
+Exam "1" *-- "0..*" Question   : contains\n(stored as plain objects)
+Exam "1" --> "0..*" Submission : receives\n(examId = exam.id)
+Submission "1" *-- "0..*" Answer : embeds\n(not a top-level collection)
+Question ..> Answer            : answered by
+
+' ============================================================
+' SERVICE DEPENDENCY RELATIONSHIPS (constructor injection)
+' ============================================================
+
+MockApiService    ..> StorageService  : uses
+MockApiService    ..> ConfigService   : uses
+MockApiService    ..> LoggerService   : uses
+
+AuthService       ..> MockApiService  : uses
+AuthService       ..> StorageService  : uses
+AuthService       ..> ConfigService   : uses
+AuthService       ..> LoggerService   : uses
+
+ExamService       ..> MockApiService  : uses
+ExamService       ..> ConfigService   : uses
+ExamService       ..> LoggerService   : uses
+
+SubmissionService ..> MockApiService  : uses
+SubmissionService ..> ExamService     : uses
+SubmissionService ..> ConfigService   : uses
+SubmissionService ..> LoggerService   : uses
+
+@enduml
