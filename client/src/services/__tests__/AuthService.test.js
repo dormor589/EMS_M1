@@ -185,3 +185,26 @@ describe('isTeacher() + isStudent()', () => {
     expect(auth.isStudent()).toBe(false);
   });
 });
+
+// ── getUserById (D010) ──────────────────────────────────────────────────────────
+describe('getUserById()', () => {
+  it('returns the user record for a known seeded user id', async () => {
+    const auth = await mkAuth();
+    const teacher = await auth.login('teacher@ems.dev', 'password');
+    const found = await auth.getUserById(teacher.id);
+    expect(found).not.toBeNull();
+    expect(found.email).toBe('teacher@ems.dev');
+    expect(found.role).toBe('teacher');
+  });
+
+  it('returns null for an unknown id', async () => {
+    const auth = await mkAuth();
+    const result = await auth.getUserById('non-existent-user-id');
+    expect(result).toBeNull();
+  });
+
+  it('throws when id is missing', async () => {
+    const auth = await mkAuth();
+    await expect(auth.getUserById('')).rejects.toThrow(/id/i);
+  });
+});

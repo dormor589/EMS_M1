@@ -331,3 +331,47 @@ describe('SubmissionService — input validation', () => {
     ).rejects.toThrow(/studentId/i);
   });
 });
+
+// ── getSubmissionById (D010) ───────────────────────────────────────────────────
+
+describe('SubmissionService.getSubmissionById', () => {
+  it('returns the submission when it exists', async () => {
+    const { exam, sub } = mkStack();
+    const published = await mkPublishedExam(exam);
+    const created = await sub.submitExam({
+      examId: published.id,
+      studentId: STUDENT_ID,
+      answers: [],
+    });
+
+    const found = await sub.getSubmissionById(created.id);
+    expect(found).not.toBeNull();
+    expect(found.id).toBe(created.id);
+    expect(found.examId).toBe(published.id);
+    expect(found.studentId).toBe(STUDENT_ID);
+  });
+
+  it('returns null when the submission does not exist', async () => {
+    const { sub } = mkStack();
+    const result = await sub.getSubmissionById('non-existent-id');
+    expect(result).toBeNull();
+  });
+
+  it('throws when id is missing', async () => {
+    const { sub } = mkStack();
+    await expect(sub.getSubmissionById('')).rejects.toThrow(/id/i);
+  });
+
+  it('gradeSubmission — grade persists and is retrievable via getSubmissionById', async () => {
+    const { exam, sub } = mkStack();
+    const published = await mkPublishedExam(exam);
+    const s = await sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] });
+
+    await sub.gradeSubmission(s.id, { grade: 72, feedback: 'Solid effort.' });
+
+    const reloaded = await sub.getSubmissionById(s.id);
+    expect(reloaded.grade).toBe(72);
+    expect(reloaded.feedback).toBe('Solid effort.');
+    expect(reloaded.status).toBe('graded');
+  });
+});
