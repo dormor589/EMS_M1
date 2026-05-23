@@ -29,3 +29,6 @@
 {"timestamp":"2026-05-23T20:32:26Z","type":"senior_qa_dispatch","request_id":"D005","mode":"bg"}
 {"timestamp":"2026-05-23T23:50:00Z","type":"audit_complete","request_id":"D005","verdict":"PASS","audit_path":"audits/D005_qa_audit.md"}
 {"timestamp":"2026-05-23T20:37:58Z","type":"senior_verdict","request_id":"D005","verdict":"PASS","summary":"D005 PASS — Layout + role nav + route guards delivered."}
+{"timestamp":"2026-05-23T20:38:20Z","type":"senior_request_issued","request_id":"D006","summary":"D006 dispatched: ExamService + Teacher flow"}
+{"timestamp":"2026-05-23T20:38:20Z","type":"senior_implement_dispatch","request_id":"D006","mode":"bg"}
+{"timestamp":"2026-05-23T23:55:00Z","type":"report_complete","request_id":"D006","report_path":"audits/D006_implementer_report.md"}
