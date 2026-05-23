@@ -11,3 +11,6 @@
 {"timestamp":"2026-05-23T19:56:20Z","type":"senior_qa_dispatch","request_id":"D002","mode":"bg"}
 {"timestamp":"2026-05-23T20:00:00Z","type":"audit_complete","request_id":"D002","verdict":"PASS","audit_path":"audits/D002_qa_audit.md"}
 {"timestamp":"2026-05-23T20:00:24Z","type":"senior_verdict","request_id":"D002","verdict":"PASS","summary":"D002 PASS — 4 services + tests delivered."}
+{"timestamp":"2026-05-23T20:00:46Z","type":"senior_request_issued","request_id":"D003","summary":"D003 dispatched: MockApi + seed + entity models"}
+{"timestamp":"2026-05-23T20:00:46Z","type":"senior_implement_dispatch","request_id":"D003","mode":"bg"}
+{"timestamp":"2026-05-23T23:09:00Z","type":"report_complete","request_id":"D003","report_path":"audits/D003_implementer_report.md"}
