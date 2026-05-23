@@ -1,0 +1,113 @@
+Entity Reference — EMS_M1 (Milestone 1)
+Plain-text version of the data model from docs/spec_brief.txt Section 7.
+Source: docs/spec_brief.txt §7 — Data Model for Mock DB
+========================================================================
+
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| Entity         | Fields                                                        | Purpose                                  | M1 Status         |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| User           | id, name, email, password, role                               | Represents a teacher or student account. | Mocked            |
+|                |                                                               | role is "teacher" or "student".          |                   |
+|                |                                                               | id is auto-generated UUID.               |                   |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| Exam           | id, title, description, durationMinutes, status, createdBy,  | Represents an exam created by a teacher. | Mocked + editable |
+|                | questions, createdAt                                          | status: Draft / Published / Closed.      |                   |
+|                |                                                               | createdBy = teacher user id.             |                   |
+|                |                                                               | questions stored as plain objects.       |                   |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| Question       | id, examId, type, text, options, correctAnswer, points        | Represents a single exam question.       | Mocked            |
+|                |                                                               | type: "multiple-choice" or "open-text".  |                   |
+|                |                                                               | options required for multiple-choice.    |                   |
+|                |                                                               | Stored inside Exam.questions array,      |                   |
+|                |                                                               | not as a top-level collection.           |                   |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| Submission     | id, examId, studentId, answers, status, grade, feedback,      | Represents a student exam submission.    | Mocked + writable |
+|                | submittedAt                                                   | status: "submitted" or "graded".         |                   |
+|                |                                                               | grade is null until a teacher grades.    |                   |
+|                |                                                               | One submission per (examId, studentId).  |                   |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+| Answer         | questionId, value                                             | Stores a student response to one         | Embedded          |
+|                |                                                               | question. Embedded inside Submission     |                   |
+|                |                                                               | answers array. Not a separate collection.|                   |
+|                |                                                               | value is a string for both MC and        |                   |
+|                |                                                               | open-text question types.                |                   |
++----------------+---------------------------------------------------------------+------------------------------------------+-------------------+
+
+
+FIELD DETAILS
+========================================================================
+
+User
+  id            : String  — UUID, auto-generated (crypto.randomUUID).
+  name          : String  — Display name. Required.
+  email         : String  — Unique identifier for login. Required.
+  password      : String  — Plain text in M1. bcrypt planned for M2.
+  role          : String  — "teacher" or "student". Required.
+
+Exam
+  id            : String  — UUID, auto-generated by ExamService.createExam.
+  title         : String  — Exam title. Required, non-empty.
+  description   : String  — Optional exam description. Default empty string.
+  durationMinutes: Number — Duration in minutes. Required, must be > 0.
+                            Default 60 if not supplied.
+  status        : String  — "Draft" | "Published" | "Closed".
+                            Default "Draft". Transitions enforced by ExamService.
+  createdBy     : String  — User id of the creating teacher. Required.
+  questions     : Array   — Array of Question plain objects. Can be empty on
+                            creation; teacher adds questions via the edit form.
+  createdAt     : String  — ISO 8601 timestamp. Set by ExamService.createExam.
+
+Question
+  id            : String  — UUID, stamped by ExamService.createExam / updateExam.
+  examId        : String  — id of the parent Exam. Set automatically.
+  type          : String  — "multiple-choice" or "open-text". Required.
+  text          : String  — Question prompt text. Required.
+  options       : Array   — String options for multiple-choice. Must be
+                            non-empty for MC type. Empty array for open-text.
+  correctAnswer : any     — For MC: the text of the correct option.
+                            For open-text: model answer (optional).
+                            null if not supplied.
+  points        : Number  — Point value. Default 1.
+
+Submission
+  id            : String  — UUID, auto-generated by SubmissionService.submitExam.
+  examId        : String  — id of the submitted Exam. Required.
+  studentId     : String  — User id of the submitting student. Required.
+  answers       : Array   — Array of Answer plain objects ({ questionId, value }).
+  status        : String  — "submitted" or "graded". Default "submitted".
+  grade         : Number|null — Numeric grade. null until graded.
+  feedback      : String  — Teacher feedback text. Empty string until graded.
+  submittedAt   : String  — ISO 8601 timestamp. Set by SubmissionService.submitExam.
+
+Answer (embedded in Submission.answers — not a stored collection)
+  questionId    : String  — id of the Question being answered. Required.
+  value         : any     — Student response. String for MC (selected option
+                            text) or open-text (typed answer). Blank string
+                            if the student left the question unanswered.
+
+
+STORAGE COLLECTIONS (localStorage keys)
+========================================================================
+
+  ems_users       : Array of User plain objects
+  ems_exams       : Array of Exam plain objects (each with questions array inline)
+  ems_submissions : Array of Submission plain objects (each with answers array inline)
+  ems_current_user: Single User plain object for the logged-in session
+
+  Draft auto-save keys (per-student, per-exam, cleared on submit):
+  ems_draft_<examId>_<studentId> : Object mapping questionId -> answer value
+
+
+STATE MACHINE SUMMARY
+========================================================================
+
+Exam status transitions (enforced in ExamService — not the UI):
+
+  Draft ──> Published   (ExamService.publishExam)
+  Published ──> Closed  (ExamService.closeExam)
+
+  All other transitions are rejected with:
+    Error("Invalid status transition: <from> -> <to>")
+
+  Students can only see exams with status "Published".
+  Draft and Closed exams are never returned by getPublishedExams().
