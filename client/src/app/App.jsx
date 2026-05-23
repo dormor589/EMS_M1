@@ -1,34 +1,29 @@
 /**
  * App.jsx — application root.
  *
- * Responsibilities (D004 scope):
- *  1. Seed mock DB on first mount via mockApi.seedIfEmpty().
- *  2. Read initial auth state from AuthService (localStorage-backed).
- *  3. Wrap with BrowserRouter and render route table.
- *  4. Propagate auth-state changes up from Login/Register/Logout.
+ * Responsibilities:
+ *   1. Seed mock DB on first mount (no-op if already populated).
+ *   2. Wrap with BrowserRouter.
+ *   3. Render AppRoutes (the full route tree with MainLayout shell).
  *
- * Full role-aware layout (MainLayout, NavigationMenu, route guards) wired in D005.
+ * Auth state is managed by NavigationMenu (reads on location change) and
+ * ProtectedRoute (reads on each render). No top-level prop drilling needed.
  *
  * Source: docs/spec_brief.txt §6 Recommended Architecture
  */
 
 import { useEffect, useState } from 'react';
-import { BrowserRouter }       from 'react-router-dom';
-import { mockApi, auth }       from '../services/index.js';
-import AppRoutes               from './routes.jsx';
+import { BrowserRouter } from 'react-router-dom';
+import { mockApi } from '../services/index.js';
+import AppRoutes  from './routes.jsx';
 
 function App() {
-  // currentUser is null until seedIfEmpty resolves; then read from AuthService.
-  const [currentUser, setCurrentUser] = useState(null);
-  const [ready, setReady]             = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Seed mock DB (no-op if already populated), then hydrate auth state.
-    // No business logic here — delegated to mockApi and auth services.
-    mockApi.seedIfEmpty().then(() => {
-      setCurrentUser(auth.getCurrentUser());
-      setReady(true);
-    });
+    // Seed mock DB once; no-op on subsequent mounts.
+    // No business logic — delegated to MockApiService.
+    mockApi.seedIfEmpty().then(() => setReady(true));
   }, []);
 
   if (!ready) {
@@ -41,7 +36,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AppRoutes currentUser={currentUser} onAuthChange={setCurrentUser} />
+      <AppRoutes />
     </BrowserRouter>
   );
 }

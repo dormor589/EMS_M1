@@ -1,95 +1,114 @@
 /**
- * routes.jsx — route declarations for EMS_M1.
+ * routes.jsx — full role-aware route table for EMS_M1.
  *
- * D004: minimal scaffold — '/', '/login', '/register' only.
- * D005 will expand this to full role-based routes with protected guards
- * and replace the inline Landing with MainLayout + role-specific pages.
+ * All page routes are nested inside MainLayout (persistent shell with nav).
+ * Teacher and student routes are guarded by ProtectedRoute.
+ * '/' resolves via LandingRedirect based on auth state.
  *
- * Source: docs/spec_brief.txt §6 Recommended Architecture
+ * Source: docs/spec_brief.txt §6 Recommended Architecture, §15.1 Component Hierarchy
  */
 
-import { Routes, Route, Link } from 'react-router-dom';
-import { auth }         from '../services/index.js';
-import LoginPage        from '../pages/auth/LoginPage.jsx';
-import RegisterPage     from '../pages/auth/RegisterPage.jsx';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { auth } from '../services/index.js';
+
+// Layout
+import MainLayout    from '../components/layout/MainLayout.jsx';
+import ProtectedRoute from '../components/shared/ProtectedRoute.jsx';
+
+// Auth pages
+import LoginPage    from '../pages/auth/LoginPage.jsx';
+import RegisterPage from '../pages/auth/RegisterPage.jsx';
+
+// Teacher pages (placeholder components — filled in D006)
+import TeacherDashboard from '../pages/teacher/TeacherDashboard.jsx';
+import TeacherExamsPage from '../pages/teacher/TeacherExamsPage.jsx';
+import CreateExamPage   from '../pages/teacher/CreateExamPage.jsx';
+import EditExamPage     from '../pages/teacher/EditExamPage.jsx';
+import SubmissionsPage  from '../pages/teacher/SubmissionsPage.jsx';
+
+// Student pages (placeholder components — filled in D007)
+import StudentDashboard   from '../pages/student/StudentDashboard.jsx';
+import AvailableExamsPage from '../pages/student/AvailableExamsPage.jsx';
+import TakeExamPage       from '../pages/student/TakeExamPage.jsx';
+import GradesPage         from '../pages/student/GradesPage.jsx';
+
+// Misc
+import NotFoundPage from '../pages/NotFoundPage.jsx';
 
 /**
- * Application route table.
+ * Full application route tree.
  *
- * @param {{ onAuthChange: function(import('../models/User.js').default|null): void,
- *           currentUser:  import('../models/User.js').default|null }} props
+ * All routes are nested under MainLayout so every page gets the nav shell.
+ * ProtectedRoute enforces authentication and role restrictions at the component
+ * level — no centralized auth check needed in this component.
+ *
+ * @returns {JSX.Element}
  */
-function AppRoutes({ onAuthChange, currentUser }) {
+function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<Landing currentUser={currentUser} onAuthChange={onAuthChange} />}
-      />
-      <Route
-        path="/login"
-        element={<LoginPage onSuccess={onAuthChange} />}
-      />
-      <Route
-        path="/register"
-        element={<RegisterPage onSuccess={onAuthChange} />}
-      />
+      <Route element={<MainLayout />}>
+        {/* Landing — redirects based on auth state */}
+        <Route path="/" element={<LandingRedirect />} />
+
+        {/* Auth pages — accessible to everyone */}
+        <Route path="/login"    element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        {/* Teacher routes — require role="teacher" */}
+        <Route path="/teacher" element={
+          <ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>
+        } />
+        <Route path="/teacher/exams" element={
+          <ProtectedRoute role="teacher"><TeacherExamsPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/exams/new" element={
+          <ProtectedRoute role="teacher"><CreateExamPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/exams/:id/edit" element={
+          <ProtectedRoute role="teacher"><EditExamPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/submissions" element={
+          <ProtectedRoute role="teacher"><SubmissionsPage /></ProtectedRoute>
+        } />
+
+        {/* Student routes — require role="student" */}
+        <Route path="/student" element={
+          <ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>
+        } />
+        <Route path="/student/exams" element={
+          <ProtectedRoute role="student"><AvailableExamsPage /></ProtectedRoute>
+        } />
+        <Route path="/student/exams/:id" element={
+          <ProtectedRoute role="student"><TakeExamPage /></ProtectedRoute>
+        } />
+        <Route path="/student/grades" element={
+          <ProtectedRoute role="student"><GradesPage /></ProtectedRoute>
+        } />
+
+        {/* 404 catch-all */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
     </Routes>
   );
 }
 
-// ── Landing ──────────────────────────────────────────────────────────────────
+// ── LandingRedirect ───────────────────────────────────────────────────────────
 
 /**
- * Minimal landing view — replaced by role-aware pages in D006/D007.
+ * '/' handler — redirects immediately based on current auth state.
  *
- * Shows authenticated user's name + role with a logout button, or
- * Login / Register links when no session exists.
- * No business logic here — auth operations delegated to AuthService.
+ * Unauthenticated  → /login
+ * Teacher          → /teacher
+ * Student          → /student
  *
- * @param {{ currentUser: import('../models/User.js').default|null,
- *           onAuthChange: function(null): void }} props
+ * No business logic here — reads from auth.getCurrentUser() only.
  */
-function Landing({ currentUser, onAuthChange }) {
-  function handleLogout() {
-    auth.logout(); // business logic in AuthService
-    onAuthChange(null);
-  }
-
-  return (
-    <div style={{ fontFamily: 'sans-serif', maxWidth: 600, margin: '4rem auto', padding: '2rem', textAlign: 'center' }}>
-      <h1>Full Stack Exam Management System</h1>
-      <p style={{ color: '#6b7280', marginBottom: '2rem' }}>Milestone 1</p>
-
-      {currentUser ? (
-        <div>
-          <p style={{ fontSize: 18 }}>
-            Welcome, <strong>{currentUser.name}</strong>{' '}
-            <span style={{ background: '#dbeafe', color: '#1e40af', borderRadius: 4, padding: '2px 8px', fontSize: 13 }}>
-              {currentUser.role}
-            </span>
-          </p>
-          <button
-            onClick={handleLogout}
-            style={{ marginTop: '1rem', padding: '8px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
-          >
-            Logout
-          </button>
-          <p style={{ marginTop: '1.5rem', color: '#9ca3af', fontSize: 13 }}>
-            Role-based dashboard pages wired in D006/D007.
-          </p>
-        </div>
-      ) : (
-        <div>
-          <p>Please log in or register to continue.</p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: '1rem' }}>
-            <Link to="/login"    style={{ padding: '10px 24px', background: '#2563eb', color: '#fff', borderRadius: 4, textDecoration: 'none' }}>Log In</Link>
-            <Link to="/register" style={{ padding: '10px 24px', background: '#16a34a', color: '#fff', borderRadius: 4, textDecoration: 'none' }}>Register</Link>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function LandingRedirect() {
+  const user = auth.getCurrentUser();
+  if (!user)                      return <Navigate to="/login"   replace />;
+  if (user.role === 'teacher')    return <Navigate to="/teacher" replace />;
+  return                                 <Navigate to="/student" replace />;
 }
 
 export default AppRoutes;
