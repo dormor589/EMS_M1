@@ -38,7 +38,7 @@ class Question {
 
     const resolvedOptions = options || [];
     if (type === 'multiple-choice' && resolvedOptions.length === 0) {
-      throw new Error('Question: "multiple-choice" questions must have at least one option');
+      throw new Error('Question: "multiple-choice" questions require a non-empty "options" array');
     }
 
     /** @type {string} */
