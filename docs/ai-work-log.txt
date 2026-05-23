@@ -161,3 +161,40 @@ D005 — 2026-05-23T23:30:00Z
   - / as student → /student
   - / as unauthed → /login
 -------------------------------------------------------------
+-------------------------------------------------------------
+D006 — 2026-05-23T23:55:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: ExamService + Teacher flow (Dashboard, Exams list, Create, Edit, Submissions stub)
+
+  Files added: ExamService.js, styles/pages.css, ExamService.test.js (38 tests)
+  Files replaced: TeacherDashboard.jsx, TeacherExamsPage.jsx, CreateExamPage.jsx,
+                  EditExamPage.jsx, SubmissionsPage.jsx
+  Files updated: services/index.js (wired examService), main.jsx (import pages.css)
+  Commits: 9 conventional commits on dev branch.
+  Wall time: ~45 minutes.
+
+  Summary of work:
+  - ExamService: full CRUD + Draft→Published→Closed state machine enforced in
+    the service. publishExam() rejects any non-Draft; closeExam() rejects any
+    non-Published. Invalid transitions throw 'Invalid status transition: X → Y'.
+    updateExam() strips status/id/createdAt from partial to enforce dedicated methods.
+    Each question gets id + examId stamped on create/update.
+  - services/index.js: added examService singleton (new ExamService(mockApi, config, logger)).
+  - pages.css: dark/light button variants (.ems-btn), status badges (.ems-badge--draft/
+    published/closed), exam table, form layout, question editor, responsive breakpoints.
+  - TeacherDashboard: shows total/draft/published/closed/submissions counters derived
+    from getExamsByTeacher(); quick-links to Create and View Exams.
+  - TeacherExamsPage: table with status badge, duration, question count, and per-row
+    actions (Edit always; Publish if Draft; Close if Published; nothing if Closed).
+    Publish/Close call ExamService state machine methods; list re-fetches on success.
+  - CreateExamPage: form with title/description/duration + dynamic question list.
+    QuestionEditor sub-component supports MC (dynamic option list) and open-text.
+    Validates title non-empty + ≥1 question before calling examService.createExam().
+  - EditExamPage: same form pre-filled from getExamById(). Shows banner for
+    Published/Closed exams. updateExam() strips status so edit cannot bypass machine.
+  - SubmissionsPage: stub that reads raw mock data from mockApi.get('submissions');
+    shows placeholder when empty. D007 replaces with SubmissionService wiring.
+  - 188/188 tests PASS (38 new ExamService tests + all 150 prior).
+  - Grep verified: localStorage only in StorageService; console.* only in LoggerService.
+  - npm run build passes (103ms, 53 modules).
+-------------------------------------------------------------
