@@ -33,3 +33,19 @@ coverage/
 # Worker runtime state (per-dispatch PID and log files)
 audits/*.pid
 audits/*.log
+
+# Internal team-coordination artifacts (Team Lead / Implementer / QA process state)
+# These were the working artifacts of our deployment process — kept local for
+# reference but excluded from the public repo so only project deliverables are visible.
+MASTER_PLAN.md
+*.overlay.md
+deploy_requests/
+audits/
+qa_requests/
+clarifications/
+findings.jsonl
+.team_lead_cursor
+.implementer_cursor
+.qa_cursor
+docs/STATUS.md
+docs/RESUME.md
