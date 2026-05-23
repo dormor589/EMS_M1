@@ -25,9 +25,10 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
-# Session ids (worker UUIDs — not for sharing)
+# Session ids (worker + Team Lead UUIDs — local, not for sharing)
 .implementer_session_id
 .qa_session_id
+.team_lead_session_id
 
 # Worker runtime state (per-dispatch PID and log files)
 audits/*.pid
