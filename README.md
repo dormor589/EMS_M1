@@ -97,6 +97,16 @@ EMS_M1/
 
 ---
 
+## Diagrams
+
+Source files live in `docs/diagrams/` (`.puml` for PlantUML, `.txt` for plain text).
+Pre-rendered PNGs for the PlantUML diagrams:
+
+- ![Class diagram](docs/diagrams/class-diagram.png)
+- ![Use case diagram](docs/diagrams/use-case-diagram.png)
+
+---
+
 ## Technology Stack
 
 | Layer    | Technology                    |
