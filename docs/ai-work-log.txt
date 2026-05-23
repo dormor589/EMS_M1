@@ -234,3 +234,24 @@ D007 — 2026-05-24T00:10:00Z
     via storage singleton — no direct localStorage calls); console.* only in LoggerService.
   - npm run build passes (117ms, 54 modules).
 -------------------------------------------------------------
+-------------------------------------------------------------
+D008 — 2026-05-24T01:00:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: Documentation + diagrams
+
+  Authored docs/explanation.txt (plain text) and 4 diagram files under
+  docs/diagrams/. Spec sections cited: 14, 15.1, 15.2, 15.3.
+  Note: task was interrupted mid-execution by a quota cap and resumed
+  in a second invocation; no work was duplicated or lost.
+  Wall time: ~35 minutes (split across two invocations).
+
+  Files added:
+    docs/explanation.txt                  (plain text, no Markdown)
+    docs/diagrams/component-hierarchy.txt (actual D001-D007 component tree)
+    docs/diagrams/class-diagram.puml      (PlantUML, entities + services)
+    docs/diagrams/use-case-diagram.puml   (PlantUML, Teacher + Student + Guest)
+    docs/diagrams/entities.txt            (ASCII table, field details, state machine)
+
+  Each artifact was committed separately per overlay requirement.
+  Total docs: commits on dev branch.
+-------------------------------------------------------------
