@@ -64,3 +64,6 @@
 {"timestamp":"2026-05-23T22:15:55Z","type":"senior_implement_dispatch","request_id":"D011","mode":"bg"}
 {"timestamp":"2026-05-24T02:25:00Z","type":"report_complete","request_id":"D011","report_path":"audits/D011_implementer_report.md"}
 {"timestamp":"2026-05-23T22:17:30Z","type":"senior_verdict","request_id":"D011","verdict":"PASS","summary":"D011 PASS — Tier 1 polish: 2 MINOR fixes verified by Team Lead diff review. Build green, 221/221 tests."}
+{"timestamp":"2026-05-23T22:22:46Z","type":"senior_request_issued","request_id":"D012","summary":"D012 dispatched: Tier 1 — render PlantUML to PNG"}
+{"timestamp":"2026-05-23T22:22:46Z","type":"senior_implement_dispatch","request_id":"D012","mode":"bg"}
+{"timestamp":"2026-05-24T02:30:00Z","type":"report_complete","request_id":"D012","report_path":"audits/D012_implementer_report.md"}
