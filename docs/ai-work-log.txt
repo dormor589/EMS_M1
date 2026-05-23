@@ -89,3 +89,37 @@ D003 — 2026-05-23T23:07:00Z
   - Grep verified: localStorage and console.* constraints still clean.
   - npm run build passes (87ms, 24 modules).
 -------------------------------------------------------------
+-------------------------------------------------------------
+D004 — 2026-05-23T23:20:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Task: AuthService + Login/Register pages + role state + minimal BrowserRouter
+
+  Files added/updated: AuthService.js, LoginPage.jsx (replaced placeholder),
+    RegisterPage.jsx (replaced placeholder), routes.jsx (replaced placeholder),
+    App.jsx (updated), services/index.js (updated), AuthService.test.js.
+  Commits: 6 conventional commits on dev branch.
+  Wall time: ~35 minutes.
+
+  M1 auth limitation: passwords stored and compared plain-text.
+  bcrypt + JWT deferred to Milestone 2. DO NOT use real credentials.
+
+  Summary of work:
+  - AuthService: constructor injection (mockApi, storage, config, logger);
+    login() plain-text compare, persist via StorageService ems_current_user;
+    register() with field + email format + duplicate + password-length validation;
+    logout(), getCurrentUser() (rehydrates User.fromJSON), isAuthenticated(),
+    isTeacher(), isStudent().
+  - LoginPage: controlled form (email, password), delegates to auth.login(),
+    demo creds hint block, error display + notify.error(), navigate('/') on success.
+  - RegisterPage: controlled form (name, email, password, role select),
+    roles from config.getRoles() — no magic strings in JSX, delegates to
+    auth.register(), error display + navigate('/') on success.
+  - services/index.js: added auth singleton (new AuthService(mockApi,storage,config,logger)).
+  - routes.jsx: Routes for /, /login, /register; inline Landing shows user
+    name+role when authed (Logout button), Login/Register links when not.
+  - App.jsx: BrowserRouter wrap; seedIfEmpty on mount, then auth.getCurrentUser();
+    passes currentUser + onAuthChange to AppRoutes.
+  - 126/126 tests PASS (20 new AuthService tests).
+  - Grep verified: localStorage + console.* constraints still clean.
+  - npm run build passes (111ms, 37 modules).
+-------------------------------------------------------------
