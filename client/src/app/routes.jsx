@@ -20,11 +20,12 @@ import LoginPage    from '../pages/auth/LoginPage.jsx';
 import RegisterPage from '../pages/auth/RegisterPage.jsx';
 
 // Teacher pages (placeholder components — filled in D006)
-import TeacherDashboard from '../pages/teacher/TeacherDashboard.jsx';
-import TeacherExamsPage from '../pages/teacher/TeacherExamsPage.jsx';
-import CreateExamPage   from '../pages/teacher/CreateExamPage.jsx';
-import EditExamPage     from '../pages/teacher/EditExamPage.jsx';
-import SubmissionsPage  from '../pages/teacher/SubmissionsPage.jsx';
+import TeacherDashboard      from '../pages/teacher/TeacherDashboard.jsx';
+import TeacherExamsPage      from '../pages/teacher/TeacherExamsPage.jsx';
+import CreateExamPage        from '../pages/teacher/CreateExamPage.jsx';
+import EditExamPage          from '../pages/teacher/EditExamPage.jsx';
+import SubmissionsPage       from '../pages/teacher/SubmissionsPage.jsx';
+import SubmissionDetailPage  from '../pages/teacher/SubmissionDetailPage.jsx';
 
 // Student pages (placeholder components — filled in D007)
 import StudentDashboard   from '../pages/student/StudentDashboard.jsx';
@@ -70,6 +71,9 @@ function AppRoutes() {
         } />
         <Route path="/teacher/submissions" element={
           <ProtectedRoute role="teacher"><SubmissionsPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/submissions/:id" element={
+          <ProtectedRoute role="teacher"><SubmissionDetailPage /></ProtectedRoute>
         } />
 
         {/* Student routes — require role="student" */}
