@@ -60,3 +60,6 @@
 {"timestamp":"2026-05-23T22:08:10Z","type":"senior_qa_dispatch","request_id":"D010","mode":"bg"}
 {"timestamp":"2026-05-24T03:00:00Z","type":"audit_complete","request_id":"D010","verdict":"PASS","audit_path":"audits/D010_qa_audit.md"}
 {"timestamp":"2026-05-23T22:12:39Z","type":"senior_verdict","request_id":"D010","verdict":"PASS","summary":"D010 PASS — minimal teacher grading UI delivered."}
+{"timestamp":"2026-05-23T22:15:55Z","type":"senior_request_issued","request_id":"D011","summary":"D011 dispatched: Tier 1 polish (fix D010 MINORs)"}
+{"timestamp":"2026-05-23T22:15:55Z","type":"senior_implement_dispatch","request_id":"D011","mode":"bg"}
+{"timestamp":"2026-05-24T02:25:00Z","type":"report_complete","request_id":"D011","report_path":"audits/D011_implementer_report.md"}
