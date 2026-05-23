@@ -28,3 +28,7 @@ coverage/
 # Session ids (worker UUIDs — not for sharing)
 .implementer_session_id
 .qa_session_id
+
+# Worker runtime state (per-dispatch PID and log files)
+audits/*.pid
+audits/*.log
