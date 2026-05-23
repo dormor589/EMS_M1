@@ -1,0 +1,33 @@
+AI Work Log — Full Stack Exam Management System, Milestone 1
+=============================================================
+Format: D{NNN} — <ISO timestamp UTC> | Agent: Implementer | Task: <summary>
+
+-------------------------------------------------------------
+D001 — 2026-05-23T19:40:00Z
+  Agent: Implementer (claude-sonnet-4-6)
+  Stack decision: JavaScript (ES2022+), not TypeScript.
+  Rationale: spec_brief.txt does not mandate TypeScript, the course project is
+  a foundational milestone with no large team type-safety requirement, and the
+  OVERLAY default is JavaScript unless a strong project-fit reason exists.
+  TypeScript adds build complexity and learning overhead that slows M1 delivery.
+  TypeScript remains available as an upgrade path if the lecturer requires it.
+
+  Files added: 29 client files, 4 server files, README.md, ai-work-log.txt
+  (3 + layout/placeholder components, Vite scaffold, Express skeleton).
+  Commits: 4 conventional commits on dev branch.
+  Wall time: ~25 minutes.
+
+  Summary of work:
+  - Created Vite+React 19 client scaffold in client/ with full folder layout
+    per spec §6 (app/, components/layout|shared/, pages/auth|teacher|student/,
+    services/, data/, models/, styles/).
+  - Replaced Vite default App.jsx with EMS_M1 landing component.
+  - Added react-router-dom for D005 routing.
+  - Created Express 5 server skeleton in server/ with /health endpoint
+    (returns { status, milestone, time }).
+  - Verified: `node src/app.js` + `curl localhost:4000/health` → 200 OK.
+  - Added placeholder React components for all 11 pages (auth ×2, teacher ×5,
+    student ×4) plus NavigationMenu + MainLayout.
+  - Wrote top-level README.md with install/run instructions.
+  - Pushed dev branch to origin.
+-------------------------------------------------------------
