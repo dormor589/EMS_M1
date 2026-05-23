@@ -4,3 +4,4 @@
 {"id": 4, "title": "AuthService + Login/Register + role state", "file": "D004.md", "status": "PASS", "date": "2026-05-23", "risk": "CRITICAL", "tier": 3}
 {"id": 10, "title": "Minimal teacher submission review + grading UI", "file": "D010.md", "status": "PASS", "date": "2026-05-24", "risk": "MEDIUM", "tier": 2}
 {"id": 11, "title": "Polish: fix D010 MINOR findings", "file": "D011.md", "status": "PASS", "date": "2026-05-24", "risk": "LOW", "tier": 1}
+{"id": 12, "title": "Generate PNG renders from PlantUML diagrams", "file": "D012.md", "status": "PASS", "date": "2026-05-24", "risk": "LOW", "tier": 1}
