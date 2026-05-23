@@ -68,3 +68,5 @@
 {"timestamp":"2026-05-23T22:22:46Z","type":"senior_implement_dispatch","request_id":"D012","mode":"bg"}
 {"timestamp":"2026-05-24T02:30:00Z","type":"report_complete","request_id":"D012","report_path":"audits/D012_implementer_report.md"}
 {"timestamp":"2026-05-23T22:26:51Z","type":"senior_verdict","request_id":"D012","verdict":"PASS","summary":"D012 PASS — 2 PNGs rendered (90KB + 91KB, valid PNG), README linked. Diff reviewed by Team Lead."}
+{"timestamp":"2026-05-23T22:30:33Z","type":"senior_monitor_stopped","task_id":"b3geq7anp","reason":"M1 complete — submitted on dev per course rules, no PR to main","summary":"Persistent Monitor retired. Worker sessions preserved for M2."}
+{"timestamp":"2026-05-23T22:30:33Z","type":"milestone_complete","milestone":"M1","summary":"All D-tasks PASS (D001-D012). 120 commits on dev pushed to origin. main untouched. Awaiting M2 trigger."}
