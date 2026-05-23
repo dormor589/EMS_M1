@@ -1,0 +1,363 @@
+/**
+ * pages.css — page-level styles for EMS_M1.
+ *
+ * Covers: dashboard cards, exam tables, form layouts, status badges,
+ * question editor, and shared button utilities used across teacher pages.
+ *
+ * Source: docs/spec_brief.txt §6 — Recommended Architecture (responsive basics)
+ */
+
+/* ── Shared button utilities ─────────────────────────────────────────────── */
+
+.ems-btn {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.ems-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.ems-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ems-btn--primary {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+.ems-btn--secondary {
+  background: #e2e8f0;
+  color: #1e3a5f;
+}
+
+.ems-btn--success {
+  background: #16a34a;
+  color: #fff;
+}
+
+.ems-btn--warning {
+  background: #d97706;
+  color: #fff;
+}
+
+.ems-btn--danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.ems-btn--sm {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+/* ── Page headings ───────────────────────────────────────────────────────── */
+
+.ems-page {
+  padding: 2rem 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.ems-page__title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 1.5rem;
+}
+
+.ems-page__subtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin-bottom: 1rem;
+}
+
+/* ── Dashboard cards ─────────────────────────────────────────────────────── */
+
+.ems-dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.ems-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.ems-card__value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e3a5f;
+}
+
+.ems-card__label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.3rem;
+}
+
+.ems-dashboard__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* ── Status badge ────────────────────────────────────────────────────────── */
+
+.ems-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ems-badge--draft {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.ems-badge--published {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ems-badge--closed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ── Exam table ──────────────────────────────────────────────────────────── */
+
+.ems-table-wrap {
+  overflow-x: auto;
+}
+
+.ems-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ems-table th {
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 600;
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.ems-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.ems-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ems-table__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* ── Form layout ─────────────────────────────────────────────────────────── */
+
+.ems-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.75rem;
+  max-width: 780px;
+}
+
+.ems-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1.1rem;
+}
+
+.ems-form__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ems-form__input,
+.ems-form__textarea,
+.ems-form__select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ems-form__input:focus,
+.ems-form__textarea:focus,
+.ems-form__select:focus {
+  outline: 2px solid #1e3a5f;
+  outline-offset: 1px;
+}
+
+.ems-form__textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.ems-form__row {
+  display: flex;
+  gap: 1rem;
+}
+
+.ems-form__row .ems-form__group {
+  flex: 1;
+}
+
+.ems-form__error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.ems-form__banner {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  color: #92400e;
+  margin-bottom: 1.25rem;
+}
+
+.ems-form__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Question editor ─────────────────────────────────────────────────────── */
+
+.ems-questions {
+  margin-top: 1.5rem;
+}
+
+.ems-questions__heading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  margin-bottom: 0.75rem;
+}
+
+.ems-question-card {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+}
+
+.ems-question-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.ems-question-card__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ems-options-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.ems-options-list__item {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  align-items: center;
+}
+
+.ems-options-list__input {
+  flex: 1;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+/* ── Submissions stub ────────────────────────────────────────────────────── */
+
+.ems-stub {
+  background: #f1f5f9;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  padding: 2.5rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Loading / empty states ──────────────────────────────────────────────── */
+
+.ems-loading {
+  color: #64748b;
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+.ems-empty {
+  color: #94a3b8;
+  font-style: italic;
+  padding: 1rem 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .ems-form__row {
+    flex-direction: column;
+  }
+
+  .ems-dashboard__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ems-table th,
+  .ems-table td {
+    padding: 0.5rem 0.55rem;
+    font-size: 0.82rem;
+  }
+}
