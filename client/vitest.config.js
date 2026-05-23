@@ -3,10 +3,12 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // jsdom provides browser globals (localStorage, window, etc.)
+    // jsdom provides browser globals (localStorage, window, document, etc.)
     environment: 'jsdom',
     globals: true,
-    // Test files: src/**/__tests__/*.test.js or client/tests/
-    include: ['src/**/__tests__/**/*.test.js', 'tests/**/*.test.js'],
+    // Test files: src/**/__tests__/*.test.{js,jsx}
+    include: ['src/**/__tests__/**/*.test.{js,jsx}', 'tests/**/*.test.{js,jsx}'],
+    // Load @testing-library/jest-dom matchers globally for all tests
+    setupFiles: ['./src/test-setup.js'],
   },
 });
