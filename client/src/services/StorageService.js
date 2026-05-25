@@ -8,7 +8,7 @@
  * clear() is scoped: it removes only keys prefixed 'ems_' so unrelated
  * browser/application state is never touched.
  *
- * Source: docs/spec_brief.txt §8 — StorageService
+ * Source: the milestone brief §8 — StorageService
  */
 
 import logger from './LoggerService.js';

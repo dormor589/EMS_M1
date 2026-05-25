@@ -1,7 +1,7 @@
 /**
  * NotFoundPage — 404 catch-all.
  *
- * Source: docs/spec_brief.txt §6 Recommended Architecture
+ * Source: the milestone brief §6 Recommended Architecture
  */
 
 import { Link } from 'react-router-dom';

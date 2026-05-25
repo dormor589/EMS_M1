@@ -4,7 +4,7 @@
  * Embedded inside a Submission — not stored as a top-level collection.
  * Represents a student's response to a single question.
  *
- * Source: docs/spec_brief.txt §7 — Answer entity
+ * Source: the milestone brief §7 — Answer entity
  */
 
 class Answer {

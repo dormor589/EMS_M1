@@ -4,7 +4,7 @@
  * Verifies subscriber receives notifications, unsubscribe stops delivery,
  * and all three notification types carry correct shape.
  *
- * Source: docs/spec_brief.txt §8 — NotifyService
+ * Source: the milestone brief §8 — NotifyService
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import notify from '../NotifyService.js';

@@ -5,7 +5,7 @@
  * Teacher and student routes are guarded by ProtectedRoute.
  * '/' resolves via LandingRedirect based on auth state.
  *
- * Source: docs/spec_brief.txt §6 Recommended Architecture, §15.1 Component Hierarchy
+ * Source: the milestone brief §6 Recommended Architecture, §15.1 Component Hierarchy
  */
 
 import { Routes, Route, Navigate } from 'react-router-dom';

@@ -15,8 +15,8 @@
  *   - getSubmissionByExamAndStudent: found / not found
  *   - gradeSubmission: updates grade, feedback, status
  *
- * Source: docs/spec_brief.txt §8 — SubmissionService
- * Source: docs/spec_brief.txt §5.1 — one submission per student per exam
+ * Source: the milestone brief §8 — SubmissionService
+ * Source: the milestone brief §5.1 — one submission per student per exam
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

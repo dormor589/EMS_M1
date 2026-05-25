@@ -9,8 +9,8 @@
  * Constructor receives dependencies via injection; instantiated in
  * services/index.js.
  *
- * Source: docs/spec_brief.txt §8 — ExamService
- * Source: docs/spec_brief.txt §5.1 — Must-Have: exam status machine
+ * Source: the milestone brief §8 — ExamService
+ * Source: the milestone brief §5.1 — Must-Have: exam status machine
  */
 
 import { generateId } from '../models/util.js';
@@ -112,7 +112,7 @@ class ExamService {
    * @returns {Promise<object>} The persisted exam record.
    * @throws {Error} on validation failures.
    *
-   * Source: docs/spec_brief.txt §7 — Exam entity fields
+   * Source: the milestone brief §7 — Exam entity fields
    */
   async createExam({ title, description, durationMinutes, questions, createdBy }) {
     if (!title || !title.trim()) {
@@ -206,7 +206,7 @@ class ExamService {
    *
    * Throws if the current status is not 'Draft'.
    *
-   * Source: docs/spec_brief.txt §5.1 — exam status state machine
+   * Source: the milestone brief §5.1 — exam status state machine
    *
    * @param {string} id - Exam ID.
    * @returns {Promise<object>} The updated exam record.
@@ -234,7 +234,7 @@ class ExamService {
    *
    * Throws if the current status is not 'Published'.
    *
-   * Source: docs/spec_brief.txt §5.1 — exam status state machine
+   * Source: the milestone brief §5.1 — exam status state machine
    *
    * @param {string} id - Exam ID.
    * @returns {Promise<object>} The updated exam record.

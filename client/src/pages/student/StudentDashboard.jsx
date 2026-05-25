@@ -11,8 +11,8 @@
  *
  * No business logic in JSX — all data from ExamService + SubmissionService.
  *
- * Source: docs/spec_brief.txt §5.1 — Must-Have: student dashboard
- * Source: docs/spec_brief.txt §5.2 — Nice-to-Have: simple dashboard counters
+ * Source: the milestone brief §5.1 — Must-Have: student dashboard
+ * Source: the milestone brief §5.2 — Nice-to-Have: simple dashboard counters
  */
 
 import { useState, useEffect } from 'react';

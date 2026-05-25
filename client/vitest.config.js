@@ -1,4 +1,4 @@
-// Source: docs/spec_brief.txt §3.2 — Vitest preferred (Vite-native)
+// Source: the milestone brief §3.2 — Vitest preferred (Vite-native)
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({

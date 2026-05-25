@@ -8,7 +8,7 @@
  *
  * Models are PURE — no service imports.
  *
- * Source: docs/spec_brief.txt §7 — Exam entity
+ * Source: the milestone brief §7 — Exam entity
  */
 
 import { generateId } from './util.js';

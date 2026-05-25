@@ -2,7 +2,7 @@
  * models/util.js — shared utilities for entity models.
  *
  * Kept separate so models stay pure (no service imports).
- * Source: docs/spec_brief.txt §7 — ID generation note in D003.
+ * Source: the milestone brief §7 — ID generation note in D003.
  */
 
 /**

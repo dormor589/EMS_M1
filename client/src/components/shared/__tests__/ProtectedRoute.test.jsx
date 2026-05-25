@@ -8,7 +8,7 @@
  *
  * Uses MemoryRouter to capture <Navigate /> redirects.
  *
- * Source: docs/spec_brief.txt §5.1 — role-based access control
+ * Source: the milestone brief §5.1 — role-based access control
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';

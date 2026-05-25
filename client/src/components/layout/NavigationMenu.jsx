@@ -10,7 +10,7 @@
  *   Teacher         → Dashboard, Exams, New Exam, Submissions + Logout
  *   Student         → Dashboard, Available Exams, Grades + Logout
  *
- * Source: docs/spec_brief.txt §5.1 Must-Have — role-based navigation
+ * Source: the milestone brief §5.1 Must-Have — role-based navigation
  */
 
 import { useState, useEffect } from 'react';

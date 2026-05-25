@@ -1,4 +1,4 @@
-// Source: docs/spec_brief.txt §5.2 Nice-to-Have — Initial backend Express skeleton
+// Source: the milestone brief §5.2 Nice-to-Have — Initial backend Express skeleton
 // Express skeleton — M1 scope: health endpoint only.
 // Real routes, auth, and DB integration planned for M2.
 
@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // Health endpoint
-// Source: docs/spec_brief.txt §5.2 — /health → { status: "ok", milestone: "M1", time: <ISO> }
+// Source: the milestone brief §5.2 — /health → { status: "ok", milestone: "M1", time: <ISO> }
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',

@@ -4,7 +4,7 @@
  * Verifies that every getter returns the correct type, shape, and values
  * declared in the spec.
  *
- * Source: docs/spec_brief.txt §8 — ConfigService
+ * Source: the milestone brief §8 — ConfigService
  */
 import { describe, it, expect } from 'vitest';
 import config from '../ConfigService.js';

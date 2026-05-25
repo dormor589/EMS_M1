@@ -5,7 +5,7 @@
  * jsdom localStorage cleared before each test. Seed data is loaded per-test
  * so the teacher@ems.dev / password credentials are always available.
  *
- * Source: docs/spec_brief.txt §8 — AuthService
+ * Source: the milestone brief §8 — AuthService
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

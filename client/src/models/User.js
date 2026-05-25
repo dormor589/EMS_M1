@@ -5,7 +5,7 @@
  * Models are PURE — no service imports. Validation values mirror ConfigService
  * but are defined locally to avoid circular dependencies.
  *
- * Source: docs/spec_brief.txt §7 — User entity
+ * Source: the milestone brief §7 — User entity
  */
 
 import { generateId } from './util.js';

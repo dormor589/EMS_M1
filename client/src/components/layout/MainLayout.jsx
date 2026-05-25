@@ -7,7 +7,7 @@
  * All pages that sit inside the auth/role-aware shell are nested under
  * this layout in routes.jsx.
  *
- * Source: docs/spec_brief.txt §6 Recommended Architecture, §15.1 Component Hierarchy
+ * Source: the milestone brief §6 Recommended Architecture, §15.1 Component Hierarchy
  */
 
 import { Outlet } from 'react-router-dom';

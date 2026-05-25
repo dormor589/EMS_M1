@@ -4,7 +4,7 @@
  * Represents a single question within an Exam.
  * Models are PURE — no service imports.
  *
- * Source: docs/spec_brief.txt §7 — Question entity
+ * Source: the milestone brief §7 — Question entity
  */
 
 import { generateId } from './util.js';

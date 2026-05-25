@@ -10,7 +10,7 @@
  *   <ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>
  *   <ProtectedRoute>              <SomePage />          </ProtectedRoute>  // auth only
  *
- * Source: docs/spec_brief.txt §5.1 Must-Have — role-based access control
+ * Source: the milestone brief §5.1 Must-Have — role-based access control
  */
 
 import { Navigate } from 'react-router-dom';

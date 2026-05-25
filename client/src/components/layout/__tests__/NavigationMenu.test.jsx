@@ -6,7 +6,7 @@
  *
  * Uses @testing-library/react with a MemoryRouter (required for NavLink / Link).
  *
- * Source: docs/spec_brief.txt §5.1 — role-based navigation
+ * Source: the milestone brief §5.1 — role-based navigation
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';

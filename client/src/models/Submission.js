@@ -7,7 +7,7 @@
  *
  * Models are PURE — no service imports.
  *
- * Source: docs/spec_brief.txt §7 — Submission entity
+ * Source: the milestone brief §7 — Submission entity
  */
 
 import { generateId } from './util.js';

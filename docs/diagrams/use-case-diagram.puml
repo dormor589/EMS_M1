@@ -1,6 +1,6 @@
 @startuml EMS_M1_UseCaseDiagram
 ' EMS_M1 Use Case Diagram — reflects features implemented in D001-D007.
-' Source: docs/spec_brief.txt §15.2
+' Source: the milestone brief §15.2
 '
 ' Notes on M1 scope:
 '   - Grade Submission: service stub exists (gradeSubmission()) but

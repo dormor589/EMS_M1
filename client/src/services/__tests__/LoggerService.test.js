@@ -4,7 +4,7 @@
  * Verifies level filtering, console delegation, and setLevel validation.
  * console.* is spied on; no real output should reach the test runner.
  *
- * Source: docs/spec_brief.txt §8 — LoggerService
+ * Source: the milestone brief §8 — LoggerService
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 

@@ -4,7 +4,7 @@
  * Uses real StorageService + jsdom localStorage (cleared between tests).
  * Creates a fresh MockApiService instance per suite to avoid singleton bleed.
  *
- * Source: docs/spec_brief.txt §8 — MockApiService
+ * Source: the milestone brief §8 — MockApiService
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import MockApiService from '../MockApiService.js';

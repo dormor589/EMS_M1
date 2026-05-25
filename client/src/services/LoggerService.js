@@ -7,7 +7,7 @@
  * Includes a level filter: messages below the current level are silently
  * dropped. Levels in ascending severity: debug < info < warn < error.
  *
- * Source: docs/spec_brief.txt §8 — LoggerService
+ * Source: the milestone brief §8 — LoggerService
  */
 
 // ── Level constants ───────────────────────────────────────────────────────────

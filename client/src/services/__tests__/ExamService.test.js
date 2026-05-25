@@ -15,8 +15,8 @@
  *   - updateExam: partial update; status field is stripped
  *   - deleteExam: removes the record
  *
- * Source: docs/spec_brief.txt §8 — ExamService
- * Source: docs/spec_brief.txt §5.1 — exam status state machine
+ * Source: the milestone brief §8 — ExamService
+ * Source: the milestone brief §5.1 — exam status state machine
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

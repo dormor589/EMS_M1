@@ -4,7 +4,7 @@
  * Vitest runs in jsdom, which provides a real localStorage implementation.
  * localStorage is cleared before each test to ensure isolation.
  *
- * Source: docs/spec_brief.txt §8 — StorageService
+ * Source: the milestone brief §8 — StorageService
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import storage from '../StorageService.js';

@@ -25,8 +25,8 @@
  *
  * No business logic in JSX — all service calls delegate to SubmissionService.
  *
- * Source: docs/spec_brief.txt §5.1 — Student can open an exam and submit
- * Source: docs/spec_brief.txt §7 — Question types: multiple-choice, open-text
+ * Source: the milestone brief §5.1 — Student can open an exam and submit
+ * Source: the milestone brief §7 — Question types: multiple-choice, open-text
  */
 
 import { useState, useEffect, useCallback } from 'react';

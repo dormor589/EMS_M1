@@ -1,7 +1,7 @@
 /**
  * Entity model unit tests: User, Exam, Question, Submission, Answer.
  *
- * Source: docs/spec_brief.txt §7 — Data Model
+ * Source: the milestone brief §7 — Data Model
  */
 import { describe, it, expect } from 'vitest';
 import User       from '../User.js';

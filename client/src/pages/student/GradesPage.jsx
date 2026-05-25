@@ -10,7 +10,7 @@
  *
  * No business logic in JSX.
  *
- * Source: docs/spec_brief.txt §5.1 — Student can view submitted grade/feedback
+ * Source: the milestone brief §5.1 — Student can view submitted grade/feedback
  */
 
 import { useState, useEffect } from 'react';

@@ -5,7 +5,7 @@
  * On success: calls onSuccess(user) and navigates to '/'.
  * On error: renders error message and fires notify.error().
  *
- * Source: docs/spec_brief.txt §5.1 — Register must-have feature
+ * Source: the milestone brief §5.1 — Register must-have feature
  */
 
 import { useState } from 'react';

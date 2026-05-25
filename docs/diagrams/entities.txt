@@ -1,6 +1,6 @@
 Entity Reference — EMS_M1 (Milestone 1)
-Plain-text version of the data model from docs/spec_brief.txt Section 7.
-Source: docs/spec_brief.txt §7 — Data Model for Mock DB
+Plain-text version of the data model from the milestone brief Section 7.
+Source: the milestone brief §7 — Data Model for Mock DB
 ========================================================================
 
 +----------------+---------------------------------------------------------------+------------------------------------------+-------------------+

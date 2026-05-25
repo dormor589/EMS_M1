@@ -8,7 +8,7 @@
  * Notification shape:
  *   { type: 'success'|'error'|'warning', message: string, id: string, timestamp: number }
  *
- * Source: docs/spec_brief.txt §8 — NotifyService
+ * Source: the milestone brief §8 — NotifyService
  */
 
 import logger from './LoggerService.js';

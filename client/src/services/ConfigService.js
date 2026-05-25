@@ -5,7 +5,7 @@
  * in quant deployments). All magic strings and configuration values live here.
  * Other modules import from this service; nothing is duplicated elsewhere.
  *
- * Source: docs/spec_brief.txt §8 — ConfigService
+ * Source: the milestone brief §8 — ConfigService
  */
 
 // ── Module-level constants ────────────────────────────────────────────────────

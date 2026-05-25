@@ -9,7 +9,7 @@
  * Auth state is managed by NavigationMenu (reads on location change) and
  * ProtectedRoute (reads on each render). No top-level prop drilling needed.
  *
- * Source: docs/spec_brief.txt §6 Recommended Architecture
+ * Source: the milestone brief §6 Recommended Architecture
  */
 
 import { useEffect, useState } from 'react';

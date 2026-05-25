@@ -7,7 +7,7 @@
  *
  * Constructor receives dependencies via injection; instantiated in services/index.js.
  *
- * Source: docs/spec_brief.txt §8 — MockApiService
+ * Source: the milestone brief §8 — MockApiService
  */
 
 import { getSeedData } from '../data/seedData.js';

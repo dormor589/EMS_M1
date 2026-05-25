@@ -10,8 +10,8 @@
  * Constructor receives dependencies via injection; instantiated in
  * services/index.js.
  *
- * Source: docs/spec_brief.txt §8 — SubmissionService
- * Source: docs/spec_brief.txt §5.1 — Must-Have: student submit, view grades
+ * Source: the milestone brief §8 — SubmissionService
+ * Source: the milestone brief §5.1 — Must-Have: student submit, view grades
  */
 
 import { generateId } from '../models/util.js';
@@ -52,7 +52,7 @@ class SubmissionService {
    * @returns {Promise<object>} The persisted Submission plain-object.
    * @throws {Error} on validation / guard failure.
    *
-   * Source: docs/spec_brief.txt §5.1 — Student can open an exam and submit answers
+   * Source: the milestone brief §5.1 — Student can open an exam and submit answers
    */
   async submitExam({ examId, studentId, answers }) {
     if (!examId)    throw new Error('SubmissionService.submitExam: "examId" is required');
@@ -167,7 +167,7 @@ class SubmissionService {
    * @returns {Promise<object|null>}
    * @throws {Error} if id is missing.
    *
-   * Source: docs/spec_brief.txt §5.1 — Teacher: review submissions
+   * Source: the milestone brief §5.1 — Teacher: review submissions
    */
   async getSubmissionById(id) {
     if (!id) throw new Error('SubmissionService.getSubmissionById: "id" is required');

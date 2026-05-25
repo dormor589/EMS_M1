@@ -13,7 +13,7 @@
  *
  * No business logic in JSX — data and transitions delegate to ExamService.
  *
- * Source: docs/spec_brief.txt §5.1 — Must-Have: teacher exam management
+ * Source: the milestone brief §5.1 — Must-Have: teacher exam management
  */
 
 import { useState, useEffect, useCallback } from 'react';

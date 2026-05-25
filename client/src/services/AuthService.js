@@ -8,7 +8,7 @@
  * Constructor receives all dependencies via injection (wired in services/index.js).
  * Current user is persisted via StorageService — no direct localStorage access.
  *
- * Source: docs/spec_brief.txt §8 — AuthService
+ * Source: the milestone brief §8 — AuthService
  */
 
 import User from '../models/User.js';
@@ -189,7 +189,7 @@ class AuthService {
    * @returns {Promise<object|null>}
    * @throws {Error} if id is missing.
    *
-   * Source: docs/spec_brief.txt §5.1 — Teacher: review submissions (view student name)
+   * Source: the milestone brief §5.1 — Teacher: review submissions (view student name)
    */
   async getUserById(id) {
     if (!id) throw new Error('AuthService.getUserById: "id" is required');

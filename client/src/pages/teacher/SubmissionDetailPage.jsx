@@ -24,9 +24,9 @@
  * No business logic in JSX — validation delegate to service; UI only decides
  * when to call and how to display results.
  *
- * Source: docs/spec_brief.txt §2 — Teacher capabilities: review submissions, grade exams
- * Source: docs/spec_brief.txt §5.1 — Must-Have: teacher review + grading flow (D010)
- * Source: docs/spec_brief.txt §7 — Submission entity fields
+ * Source: the milestone brief §2 — Teacher capabilities: review submissions, grade exams
+ * Source: the milestone brief §5.1 — Must-Have: teacher review + grading flow (D010)
+ * Source: the milestone brief §7 — Submission entity fields
  */
 
 import { useState, useEffect, useCallback } from 'react';

@@ -13,7 +13,7 @@
  *
  * No business logic in JSX.
  *
- * Source: docs/spec_brief.txt §5.1 — Student can view published exams only
+ * Source: the milestone brief §5.1 — Student can view published exams only
  */
 
 import { useState, useEffect } from 'react';

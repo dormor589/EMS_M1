@@ -12,8 +12,8 @@
  *
  * No business logic in JSX — data ops delegate to ExamService.
  *
- * Source: docs/spec_brief.txt §5.1 — Must-Have: teacher can edit exam
- * Source: docs/spec_brief.txt §7 — Exam / Question entity fields
+ * Source: the milestone brief §5.1 — Must-Have: teacher can edit exam
+ * Source: the milestone brief §7 — Exam / Question entity fields
  */
 
 import { useState, useEffect } from 'react';
