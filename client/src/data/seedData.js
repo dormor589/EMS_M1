@@ -4,11 +4,9 @@
  * IDs are hard-coded UUIDs so the seed is stable across reloads and predictable
  * in tests. Password is 'password' for all demo accounts (M1 mock auth only).
  *
- * Demo credentials (documented in docs/ai-work-log.txt):
+ * Demo credentials:
  *   Teacher  — email: teacher@ems.dev   password: password
  *   Student  — email: student@ems.dev   password: password
- *
- * Source: docs/spec_brief.txt §7 — Mock DB / seed data
  */
 
 // ── Fixed IDs ─────────────────────────────────────────────────────────────────

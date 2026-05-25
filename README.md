@@ -68,10 +68,10 @@ EMS_M1/
 │       ├── app/        # App.jsx, routes.jsx
 │       ├── components/ # layout/, shared/
 │       ├── pages/      # auth/, teacher/, student/
-│       ├── services/   # OOP service layer (D002+)
-│       ├── data/       # seedData.js (D003+)
-│       └── models/     # User, Exam, Question, Submission (D003+)
-├── server/             # Express skeleton (M2+ for real routes)
+│       ├── services/   # OOP service layer
+│       ├── data/       # seedData.js
+│       └── models/     # User, Exam, Question, Submission
+├── server/             # Express skeleton (Milestone 2+ for real routes)
 │   └── src/
 │       ├── app.js
 │       ├── routes/
@@ -80,10 +80,8 @@ EMS_M1/
 │       ├── models/
 │       └── middleware/
 ├── docs/
-│   ├── spec_brief.txt  # Project specification
-│   ├── explanation.txt # Plain-text feature documentation (D008+)
-│   ├── ai-work-log.txt # AI agent work log
-│   └── diagrams/       # PlantUML + text diagrams (D008+)
+│   ├── explanation.txt # Plain-text feature documentation
+│   └── diagrams/       # PlantUML + text diagrams
 └── README.md
 ```
 
@@ -91,9 +89,8 @@ EMS_M1/
 
 ## Documentation
 
-- **Specification:** [`docs/spec_brief.txt`](docs/spec_brief.txt)
-- **Feature explanation:** [`docs/explanation.txt`](docs/explanation.txt) _(added in D008)_
-- **AI work log:** [`docs/ai-work-log.txt`](docs/ai-work-log.txt)
+- **Feature explanation:** [`docs/explanation.txt`](docs/explanation.txt) — features, users, pages, services, and current limitations (plain text).
+- **Diagrams:** [`docs/diagrams/`](docs/diagrams/) — component hierarchy, class diagram, use-case diagram, entities reference (sources + pre-rendered PNGs).
 
 ---
 
@@ -115,8 +112,8 @@ Pre-rendered PNGs for the PlantUML diagrams:
 | Router   | react-router-dom v7           |
 | Server   | Node 22, Express 5, ESM       |
 | Storage  | localStorage (mock, M1 only)  |
-| Tests    | Vitest (D002+)                |
-| Future   | PostgreSQL, JWT, bcrypt (M2+) |
+| Tests    | Vitest                        |
+| Future   | PostgreSQL, JWT, bcrypt (Milestone 2+) |
 
 ---
 
