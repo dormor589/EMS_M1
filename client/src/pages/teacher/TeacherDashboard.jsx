@@ -5,12 +5,12 @@
  *   • Total exams created by this teacher
  *   • Draft count
  *   • Published count
- *   • Submissions count (stub — 0 until D007 wires SubmissionService)
+ *   • Submissions count
  *
  * No business logic in JSX — all data fetching delegates to ExamService.
  *
- * Source: docs/spec_brief.txt §5.2 — Nice-to-Have: dashboard counters
- * Source: docs/spec_brief.txt §5.1 — Must-Have: teacher flow
+ * Source: the milestone brief §5.2 — Nice-to-Have: dashboard counters
+ * Source: the milestone brief §5.1 — Must-Have: teacher flow
  */
 
 import { useState, useEffect } from 'react';

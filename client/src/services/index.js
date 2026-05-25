@@ -1,8 +1,8 @@
 /**
  * services/index.js — dependency-injection root for EMS_M1 client services.
  *
- * Imports the D002 singletons and creates MockApiService, AuthService, and
- * ExamService singletons wired with their dependencies. All application code
+ * Creates singleton instances of all services and wires their dependencies.
+ * All application code
  * imports services from here — never directly from individual service files.
  *
  * Dependency order (no cycles):
@@ -13,7 +13,7 @@
  *   → examService (mockApi, config, logger)
  *   → submissionService (mockApi, examService, config, logger)
  *
- * Source: docs/spec_brief.txt §8 — Services and Responsibilities
+ * Source: the milestone brief §8 — Services and Responsibilities
  */
 
 import config  from './ConfigService.js';

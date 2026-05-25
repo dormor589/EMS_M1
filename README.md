@@ -4,7 +4,7 @@ A modular React + Express client/server foundation for managing online exams and
 
 ## Project Goal
 
-Build a full stack web application for managing online exams and student submissions (see [`docs/spec_brief.txt`](docs/spec_brief.txt)).
+Build a full stack web application for managing online exams and student submissions.
 
 ## Milestone 1 Scope
 

@@ -5,14 +5,14 @@
  * On success: calls onSuccess(user) and navigates to '/'.
  * On error: renders error message and fires notify.error().
  *
- * Source: docs/spec_brief.txt §5.1 — Login must-have feature
+ * Source: the milestone brief §5.1 — Login must-have feature
  */
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, notify } from '../../services/index.js';
 
-/** Demo credentials — matches D003 seed data (teacher@ems.dev / password). */
+/** Demo credentials — match the seed data (teacher@ems.dev / password). */
 const DEMO_CREDS = {
   teacher: { email: 'teacher@ems.dev', password: 'password' },
   student: { email: 'student@ems.dev', password: 'password' },
