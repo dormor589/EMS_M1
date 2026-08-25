@@ -196,13 +196,15 @@ Found during development, each with a lesson:
 ## Branch structure
 
 ```
-main    ──●                                  initial scaffold, untouched
+main    ──●                                    initial scaffold
            \
-dev     ────●──●──●── … ──●                  Milestone 1, 126 commits
+dev     ────●──●──●── … ──●                    Milestone 1, 126 commits
                            \
-milestone-2                 ●                Milestone 2, a single commit
+milestone-2                 ●                  Milestone 2, a single commit
                              \
-dev     ──────────────────────●              merged on completion
+dev     ──────────────────────●                merged on completion
+                               \
+main    ────────────────────────●              released once the work was complete
 ```
 
 Milestone 1 was developed and pushed incrementally on `dev`.
@@ -212,5 +214,8 @@ Milestone 2 was developed **entirely locally** and pushed once, complete, on
 progress was not published, and the milestone appears as a coherent unit rather
 than a stream of intermediate states.
 
-`main` remains at the original scaffold, per the course instruction to submit
-on `dev`.
+The submission is on `dev`, per the course instruction. `main` was left at the
+initial scaffold for the whole of development and updated only at the end, once
+the project was finished — a release branch rather than a working one. `dev` and
+`milestone-2` both remain, so the progression from Milestone 1 to Milestone 2
+stays visible in the history.
