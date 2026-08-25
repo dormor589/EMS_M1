@@ -52,3 +52,7 @@ docs/RESUME.md
 docs/ai-work-log.txt
 docs/spec_brief.txt
 docs/manual_qa_checklist.txt
+
+# M2 working-state files (local only — never part of the submission)
+PROGRESS.md
+CLAUDE.md

@@ -1,0 +1,332 @@
+@startuml EMS_ClassDiagram
+' EMS — OOP class diagram (Milestone 2)
+'
+' Covers both halves of the system. The five domain entities appear on both
+' sides with the same names and the same meaning, which is deliberate: the
+' database tables, this diagram and the API payloads all describe one model.
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+
+' ============================================================
+' DOMAIN ENTITIES — mirrored client and server
+' ============================================================
+
+package "Domain entities" #F8FAFC {
+
+  class User {
+    +id : UUID
+    +name : String
+    +email : String
+    +role : 'teacher' | 'student'
+    -passwordHash : String  <<server only>>
+    --
+    +isTeacher() : boolean
+    +isStudent() : boolean
+    +toJSON() : object
+    ..
+    <i>toJSON NEVER emits passwordHash</i>
+  }
+
+  class Exam {
+    +id : UUID
+    +title : String
+    +durationMinutes : int
+    +passingGrade : int
+    +status : 'Draft'|'Published'|'Closed'
+    +createdBy : UUID
+    +generatedByAi : boolean
+    +aiPrompt : String
+    +questions : Question[]
+    --
+    +isOwnedBy(userId) : boolean
+    +canTransitionTo(status) : boolean
+    +totalWeight() : int
+    +toJSON(includeAnswerKey) : object
+  }
+
+  class Question {
+    +id : UUID
+    +type : 'multiple-choice'|'open-text'
+    +text : String
+    +options : String[]
+    -correctAnswer : int
+    +weight : int
+    --
+    +isMultipleChoice() : boolean
+    +scoreFor(value) : int
+    +toJSON(includeAnswerKey) : object
+    ..
+    <i>correctAnswer is OMITTED unless</i>
+    <i>the caller owns the exam</i>
+  }
+
+  class Submission {
+    +id : UUID
+    +status : 'in_progress'|'submitted'
+    ..    |'ai_graded'|'graded'
+    +startedAt : Date
+    +expiresAt : Date
+    +grade : Number
+    +gradedBy : 'teacher'|'ai'|'ai+teacher'
+    +needsRegrade : boolean
+    +answers : Answer[]
+    --
+    +canTransitionTo(status) : boolean
+    +hasExpired(grace) : boolean
+    +secondsRemaining() : int
+    +passed(passingGrade) : boolean
+    +toJSON(forStudent) : object
+    ..
+    <i>forStudent hides an unpublished</i>
+    <i>grade AND collapses the status</i>
+  }
+
+  class Answer {
+    +value : String
+    +isCorrect : boolean
+    +aiScore : Number
+    +aiFeedback : String
+    +score : Number
+    +feedback : String
+    --
+    +wasOverridden() : boolean
+    ..
+    <i>ai* vs final: keeping both is what</i>
+    <i>shows "AI proposed 85 → you set 92"</i>
+  }
+}
+
+' ============================================================
+' CLIENT
+' ============================================================
+
+package "Client — services" #EFF6FF {
+
+  class ConfigService <<singleton>> {
+    +getApiBaseUrl() : String
+    +getStorageKeys() : object
+    +getRoles() : String[]
+  }
+
+  class StorageService <<singleton>> {
+    +get(key) / set(key, v) / remove(key)
+    ..
+    <i>only code touching localStorage</i>
+  }
+
+  class LoggerService <<singleton>> {
+    +info/warn/error(msg, meta)
+  }
+
+  class HttpApiService {
+    -baseUrl : String
+    +get/post/put/patch/delete(path, body)
+    +getToken() / setToken() / clearToken()
+    +health() : object
+    ..
+    <i>THE SEAM. The only client code</i>
+    <i>that leaves the browser.</i>
+  }
+
+  class ClientAuthService as "AuthService" {
+    +login(email, pw) : Promise<User>
+    +register(data) : Promise<User>
+    +getCurrentUser() : User   <<sync>>
+    +refreshSession() : Promise<User>
+    +isTeacher() / isStudent()
+  }
+
+  class ClientExamService as "ExamService" {
+    +getAllExams() / getExamById(id)
+    +createExam(data) / updateExam(id, data)
+    +publishExam(id) / closeExam(id)
+  }
+
+  class ClientSubmissionService as "SubmissionService" {
+    +startAttempt(examId)
+    +saveDraft(attemptId, answers)
+    +submitExam(attemptId, {auto})
+    +gradeSubmission(id, data)
+  }
+
+  class ClientAiService as "AiService" {
+    +getStatus() / generateExam(desc, n)
+    +gradeSubmission(id)
+  }
+}
+
+' ============================================================
+' SERVER
+' ============================================================
+
+package "Server — services" #F0FDF4 {
+
+  class ServerAuthService as "AuthService" {
+    +register(data) : {user, token}
+    +login(email, pw) : {user, token}
+    +issueToken(user) : String
+    +verifyToken(token) : claims
+    ..
+    <i>bcrypt + JWT</i>
+  }
+
+  class ServerExamService as "ExamService" {
+    +list(user) / get(id, user)
+    +create(data, user)
+    +update(id, data, user)
+    +changeStatus(id, status, user)
+    ..
+    <i>owns the state machine and</i>
+    <i>every ownership check</i>
+  }
+
+  class ServerSubmissionService as "SubmissionService" {
+    +startAttempt(examId, user)
+    +saveDraft(id, answers, user)
+    +submit(id, user, {auto})
+    +saveGrade(id, data, user)
+    +aiGrade(id, user)
+    +publishGrade(id, user)
+  }
+
+  class ServerAiService as "AiService" {
+    +generateExam(spec)
+    +gradeOpenAnswers(exam, submission)
+    -validateExam(raw)
+    -validateGrades(raw, items)
+    ..
+    <i>treats model output as</i>
+    <i>UNTRUSTED INPUT</i>
+  }
+
+  class AnalyticsService {
+    +forExam(id, user, opts)
+    +overview(user)
+  }
+
+  class grading <<module>> {
+    +scoreMultipleChoice(q, value)
+    +computeGrade(questions, scores)
+    ..
+    <i>pure. The ONE place a grade</i>
+    <i>is computed.</i>
+  }
+}
+
+package "Server — data access" #FEF3C7 {
+  class UserRepository {
+    +findByEmail(email) / findById(id)
+    +create(data)
+  }
+  class ExamRepository {
+    +findById(id) / findAll(filter)
+    +create(data)
+    +update(id, fields, questions)
+    -reconcileQuestions(client, id, desired)
+    ..
+    <i>UPDATEs questions in place so ids</i>
+    <i>survive and answers are not</i>
+    <i>cascade-deleted</i>
+  }
+  class SubmissionRepository {
+    +findById(id) / findAll(filter)
+    +createAttempt(data)  <<ON CONFLICT>>
+    +saveDraft(id, answers)
+    +submit(id, scored)
+    +saveGrades(id, data)
+  }
+}
+
+package "Server — AI providers" #F5F3FF {
+  abstract class AiProvider {
+    +{abstract} generateExam(spec)
+    +{abstract} gradeAnswers(items)
+    +{abstract} summariseAnalytics(stats)
+    +name : String
+    +isModelBacked : boolean
+  }
+  abstract class ModelBackedProvider {
+    +{abstract} complete(request)
+    ..
+    <i>implements all three tasks</i>
+    <i>by prompting</i>
+  }
+  class NimProvider {
+    -model : String
+    +complete(request)
+  }
+  class FallbackProvider {
+    +generateExam(spec)
+    +gradeAnswers(items)
+    ..
+    <i>deterministic, no network</i>
+  }
+}
+
+package "Server — HTTP" #FEE2E2 {
+  class Middleware <<module>> {
+    +authenticate(req, res, next)
+    +requireRole(role)
+    +validate(schema, source)
+    +errorHandler(err, req, res, next)
+  }
+  class ApiError {
+    +status : int
+    +details : object
+    +{static} badRequest/unauthorized/
+    ..forbidden/notFound/conflict()
+  }
+}
+
+' ============================================================
+' RELATIONSHIPS
+' ============================================================
+
+User "1" --> "0..*" Exam        : creates
+User "1" --> "0..*" Submission  : sits
+Exam "1" *-- "0..*" Question    : contains
+Exam "1" --> "0..*" Submission  : receives
+Submission "1" *-- "0..*" Answer : consists of
+Question "1" --> "0..*" Answer  : is answered by
+
+' Client wiring (constructor injection, in services/index.js)
+HttpApiService ..> ConfigService
+HttpApiService ..> StorageService
+ClientAuthService ..> HttpApiService
+ClientExamService ..> HttpApiService
+ClientSubmissionService ..> HttpApiService
+ClientAiService ..> HttpApiService
+
+' Server wiring
+ServerAuthService ..> UserRepository
+ServerExamService ..> ExamRepository
+ServerExamService ..> SubmissionRepository
+ServerSubmissionService ..> SubmissionRepository
+ServerSubmissionService ..> ExamRepository
+ServerSubmissionService ..> ServerAiService
+ServerSubmissionService ..> grading
+ServerAiService ..> AiProvider
+AnalyticsService ..> ServerAiService
+
+ModelBackedProvider --|> AiProvider
+NimProvider --|> ModelBackedProvider
+FallbackProvider --|> AiProvider
+
+' The two halves meet here
+ClientAuthService ..> User
+ServerAuthService ..> User
+
+note as N1
+  <b>Why entities appear once, used by both sides</b>
+  The client and server define the same five classes
+  with the same names. The client's version maps API
+  JSON; the server's maps database rows. Keeping them
+  aligned is what lets the ERD, this diagram and the
+  API payloads describe a single model.
+end note
+
+@enduml

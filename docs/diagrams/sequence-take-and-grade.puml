@@ -1,0 +1,121 @@
+@startuml SequenceTakeAndGrade
+' Scenario 2 — A student sits an exam and a teacher grades it
+' The longest flow in the system; covers the timer, autosave and the publish gate.
+
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 200
+
+actor Student
+actor Teacher
+participant "TakeExamPage" as Take
+participant "SubmissionDetailPage" as Detail
+box "Server" #F8FAFC
+  participant "SubmissionService" as Svc
+  participant "grading.js" as Grade
+  participant "SubmissionRepository" as Repo
+end box
+database "PostgreSQL" as DB
+
+== Opening the exam ==
+
+Student -> Take : opens the exam
+Take -> Svc : POST /api/exams/:id/attempt
+Svc -> Repo : createAttempt(examId, studentId, expiresAt)
+Repo -> DB : INSERT ... ON CONFLICT DO NOTHING RETURNING *
+note right of Repo
+  Idempotent: two simultaneous requests
+  (a double click, React's dev double
+  effect) cannot create two attempts.
+  expires_at is fixed NOW, so a later
+  change to the exam duration cannot move
+  a deadline already running.
+end note
+DB --> Repo : the attempt row
+Repo --> Svc : Submission
+Svc --> Take : { submission, secondsRemaining }
+Take -> Student : renders questions + countdown
+
+== Answering (repeats) ==
+
+Student -> Take : types an answer
+Take -> Take : debounce 1.2s
+Take -> Svc : PATCH /api/attempts/:id/draft
+Svc -> Svc : reject if expired or already submitted
+Svc -> Repo : saveDraft(answers)
+Repo -> DB : INSERT ... ON CONFLICT (submission_id, question_id)\nDO UPDATE
+note right of DB
+  Answers live in the database, not the
+  browser. Closing the tab loses nothing.
+end note
+
+== Submitting ==
+
+alt the student clicks Submit
+  Student -> Take : clicks Submit
+  Take -> Svc : POST /api/attempts/:id/submit { auto: false }
+  Svc -> Svc : refuse if past expires_at
+else the countdown reaches zero
+  Take -> Svc : POST /api/attempts/:id/submit { auto: true }
+  Svc -> Svc : deadline waived — the answers were\ncaptured before expiry
+end
+
+Svc -> Grade : scoreMultipleChoice(question, value)
+note right of Grade
+  Multiple choice is marked here, from the
+  answer key. Deterministic, no model, and
+  it cannot be inconsistent between runs.
+end note
+Svc -> Repo : submit(scored)
+Repo -> DB : UPDATE submissions SET status='submitted'
+note right of Svc
+  The overall grade is NOT computed. The
+  submission stays ungraded until a teacher
+  acts on it.
+end note
+Svc --> Take : submission
+Take -> Student : redirect to Grades — no grade shown yet
+
+== Grading ==
+
+Teacher -> Detail : opens the submission
+Detail -> Svc : GET /api/submissions/:id
+Svc -> Svc : verify this teacher OWNS the exam
+Svc --> Detail : submission + exam WITH the answer key
+
+Teacher -> Detail : scores the open-text answers
+Detail -> Detail : preview total live, same formula as the server
+Teacher -> Detail : clicks Save draft
+Detail -> Svc : PATCH /api/submissions/:id/grade { publish: false }
+
+Svc -> Grade : computeGrade(questions, scores)
+note right of Grade
+  grade = sum(score x weight) / sum(weight)
+  Multiple-choice scores sent by the client
+  are ignored; the answer key decides.
+end note
+Svc -> Repo : saveGrades(status='ai_graded')
+Repo -> DB : UPDATE ... graded_at stays NULL
+
+Student -> Detail : (checks their grades)
+note over Student
+  Still sees nothing. The status is even
+  collapsed to 'submitted', so the student
+  cannot tell a draft grade exists.
+end note
+
+== Publishing ==
+
+Teacher -> Detail : clicks Publish grade
+Detail -> Svc : POST /api/submissions/:id/publish
+Svc -> Repo : saveGrades(status='graded', graded_at=now())
+Repo -> DB : UPDATE submissions
+note right of DB
+  A CHECK constraint enforces that 'graded'
+  implies both a grade and a graded_at, so
+  no code path can leave a submission
+  half-published.
+end note
+Svc --> Detail : submission
+Student -> Student : the grade and feedback are now visible
+
+@enduml

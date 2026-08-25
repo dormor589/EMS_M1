@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------------
+# EMS — full stack, one command.
+#
+#   docker compose up --build
+#
+#   client  http://localhost:5173
+#   API     http://localhost:5050
+#
+# Postgres runs in a container too, so a clean clone needs nothing installed
+# beyond Docker — no local PostgreSQL, no Node.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ems
+      POSTGRES_PASSWORD: ems_local_password
+      POSTGRES_DB: exam_app
+    ports:
+      # Exposed so you can inspect it with psql from the host while it runs.
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      # The API waits for this: without it, the API starts first, fails to
+      # connect, and exits before Postgres has finished initialising.
+      test: ["CMD-SHELL", "pg_isready -U ems -d exam_app"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+    environment:
+      NODE_ENV: production
+      PORT: 5050
+      DATABASE_URL: postgres://ems:ems_local_password@db:5432/exam_app
+      # Development-only secret. A real deployment supplies its own.
+      JWT_SECRET: ${JWT_SECRET:-compose-local-secret-change-me}
+      CORS_ORIGINS: http://localhost:5173
+      # Passed through from the host if set; absent means the AI features run
+      # on the deterministic fallback, which is a supported mode.
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NIM_MODEL: ${NIM_MODEL:-moonshotai/kimi-k3}
+    ports:
+      - "5050:5050"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: http://localhost:5050/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  db_data:

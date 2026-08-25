@@ -1,0 +1,336 @@
+==============================================================
+PROJECT NAME
+Full Stack Exam Management System
+==============================================================
+
+MILESTONE
+Milestone 1 - Architecture, Client Foundation, Mock Services, Documentation
+
+==============================================================
+PROJECT GOAL
+==============================================================
+
+Build a full stack web application for managing online exams and student
+submissions. The system allows teachers to create and publish exams with
+multiple-choice and open-text questions, and allows students to take published
+exams and view their grades.
+
+Milestone 1 establishes a clean, modular React client foundation with a mocked
+persistence layer using localStorage. The real backend (PostgreSQL, JWT,
+deployment) is planned for later milestones.
+
+==============================================================
+USERS
+==============================================================
+
+1. Teacher / Lecturer
+   - Manages the full exam lifecycle from creation through grading.
+   - Has exclusive access to exam creation, editing, and status transitions.
+
+2. Student
+   - Takes published exams and views their own grades.
+   - Can only see exams that are in Published status.
+
+3. Admin (Optional - Future Milestone)
+   - Would manage users and system-wide settings.
+   - Not implemented in Milestone 1.
+
+==============================================================
+TEACHER USE CASES (Implemented in Milestone 1)
+==============================================================
+
+- Register a new teacher account (name, email, password, role).
+- Log in with teacher credentials.
+- View teacher dashboard showing exam and counter summary.
+- Create a new exam with title, description, duration, and questions.
+- Add multiple-choice questions (with answer options) to an exam.
+- Add open-text questions to an exam.
+- Remove questions from an exam.
+- Edit an existing exam (title, description, duration, questions).
+- Publish an exam (transitions status from Draft to Published).
+- Close an exam (transitions status from Published to Closed).
+- View the list of own exams with current status and question count.
+- View a grouped submissions page showing all student submissions per exam.
+- Log out.
+
+Grading individual submissions is planned for Milestone 2. The SubmissionService
+includes a gradeSubmission() stub that updates grade and feedback fields, but
+there is no teacher grading UI in Milestone 1.
+
+==============================================================
+STUDENT USE CASES (Implemented in Milestone 1)
+==============================================================
+
+- Register a new student account (name, email, password, role).
+- Log in with student credentials.
+- View student dashboard showing available exam count, submitted count, and
+  graded count.
+- View the list of published exams not yet submitted (draft and closed exams
+  are never visible to students).
+- Open an exam and read its title, description, duration, and questions.
+- Answer multiple-choice questions by selecting a radio button.
+- Answer open-text questions by typing into a textarea.
+- Have draft answers auto-saved in localStorage while taking the exam so
+  progress is preserved if the page is refreshed.
+- Submit answers. The system records the submission and prevents re-submission
+  of the same exam.
+- View a grades page listing all submitted exams with submitted date, status,
+  grade (if graded), and feedback (if graded).
+- Log out.
+
+==============================================================
+IMPLEMENTED IN MILESTONE 1
+==============================================================
+
+- React 19 client application built with Vite 8. Component tree organized by
+  feature (auth, teacher, student, shared, layout).
+
+- Mock authentication using AuthService. Users are stored in localStorage via
+  StorageService. Passwords are stored in plain text (hashing deferred to M2).
+
+- Role-based navigation. NavigationMenu shows different links depending on
+  whether the current user is unauthenticated, a teacher, or a student.
+  Auth state is re-read on every route change without prop drilling.
+
+- Route guards. ProtectedRoute enforces authentication and role access.
+  Unauthenticated users are redirected to /login. Users with the wrong role
+  are redirected to their own home page.
+
+- Teacher exam management. Full create/edit/publish/close flow with a
+  dynamic question editor supporting multiple-choice and open-text types.
+
+- Student exam flow. AvailableExamsPage filters to Published exams only.
+  TakeExamPage renders questions, saves draft answers automatically, and
+  submits via SubmissionService.
+
+- Exam status state machine enforced in ExamService.
+  Draft can only transition to Published. Published can only transition to
+  Closed. Direct Draft to Closed is rejected. Invalid transitions throw an
+  error in the service layer, not just the UI.
+
+- One submission per student per exam. SubmissionService rejects duplicate
+  submissions with an error.
+
+- OOP service layer (8 service classes). Each service has a single
+  responsibility and is wired via constructor injection in services/index.js.
+  No business logic lives inside React component files.
+
+- Mock database using localStorage. MockApiService simulates backend CRUD
+  operations (get, getById, post, put, delete, seedIfEmpty) backed by
+  StorageService. Data persists across browser refreshes.
+
+- Seed data on first launch. getSeedData() provides one teacher account,
+  one student account, one published exam (2 questions), and one draft exam.
+  Seed is idempotent (skipped if data already exists).
+
+- Notification system. NotifyService provides success, error, and warning
+  messages via an in-memory subscriber pattern.
+
+- Logging. LoggerService wraps console output with level filtering
+  (debug, info, warn, error). LoggerService is the only file allowed to
+  call console methods directly.
+
+- Responsive layout. CSS (layout.css, pages.css) provides a dark navy
+  navigation bar, centered content area, status badges, form layout,
+  question editor, and exam table. Layout adapts for smaller screens.
+
+- Express 5 server skeleton. A minimal Node.js server runs on port 4000
+  with a GET /health endpoint. Real routes and database integration are
+  commented out as placeholders for Milestone 2.
+
+- Vitest test suite. 214 tests across 11 test files covering all 8 services
+  and 2 React components (NavigationMenu, ProtectedRoute).
+
+- Git history. All work is committed to the dev branch with conventional
+  commit messages (feat:, fix:, docs:, test:, chore:, style:).
+
+==============================================================
+NOT IMPLEMENTED YET (Planned for Later Milestones)
+==============================================================
+
+- Real backend API with Node.js and Express routes, controllers, and
+  middleware (Milestone 2).
+
+- PostgreSQL database integration and Prisma or Sequelize ORM (Milestone 2).
+
+- Real JWT-based authentication with bcrypt password hashing (Milestone 2).
+
+- HTTP deployment to a cloud platform such as Render or Railway (Milestone 2+).
+
+- Real-time features such as WebSocket notifications when a teacher grades
+  a submission (Milestone 3+).
+
+- Teacher grading UI. The service method gradeSubmission() is implemented as
+  a stub, but the teacher-facing page for entering grades and feedback does
+  not exist yet (Milestone 2).
+
+- Admin role. User management, system statistics, and configuration UI
+  (optional, Milestone 3+).
+
+- Advanced analytics. Chart-based dashboards with submission statistics,
+  average grades, pass rates (Milestone 3+).
+
+- AI-assisted features such as automatic question generation or answer
+  evaluation (optional, future).
+
+- Auto-save timer enforcement during exams. The exam duration field exists
+  but is not enforced with a countdown timer (Milestone 2).
+
+- Email notifications for registration or grade publication (Milestone 2+).
+
+==============================================================
+MAIN SERVICES (8 classes in client/src/services/)
+==============================================================
+
+ConfigService
+  Central configuration values. Holds frozen constants for API mode, storage
+  key names, default exam status, valid statuses, valid roles, and question
+  types. All other services and components read config values from here.
+
+LoggerService
+  Central logging with level filtering. Levels: debug, info, warn, error.
+  Default level is info. The sole file permitted to call console methods
+  directly. All other files log through this service.
+
+StorageService
+  Wrapper around the browser localStorage API. The sole file permitted to
+  call localStorage.getItem / setItem / removeItem directly. Provides
+  typed get / set / remove / clear (scoped to ems_ prefixed keys) / has.
+
+NotifyService
+  In-memory notification system. Exposes success(), error(), warning() to
+  emit notification objects to registered listeners. Components subscribe
+  with subscribe(listener) which returns an unsubscribe function.
+
+MockApiService
+  Simulates a REST API backend backed by StorageService. Supports get,
+  getById, post, put, delete, seedIfEmpty across three collections: users,
+  exams, submissions. All methods return Promises for M2 backend-swap
+  compatibility.
+
+AuthService
+  Authentication and current user management. Provides login() (plain-text
+  password compare, M1 only), register() (email + role validation, duplicate
+  check), logout(), getCurrentUser() (re-hydrates User from storage),
+  isAuthenticated(), isTeacher(), isStudent().
+
+ExamService
+  Exam CRUD operations and the Draft/Published/Closed state machine.
+  createExam() assigns IDs and stamps question examIds. publishExam() and
+  closeExam() enforce state machine transitions and throw on invalid moves.
+  updateExam() strips status to prevent bypass of the dedicated methods.
+  getExamsByTeacher() filters by createdBy.
+
+SubmissionService
+  Student submission operations and teacher query methods. submitExam()
+  enforces that the exam is Published and that the student has not already
+  submitted. gradeSubmission() is an M1 stub for updating grade and feedback.
+  Provides getSubmissionsByExam(), getSubmissionsByStudent(), and
+  getSubmissionByExamAndStudent().
+
+==============================================================
+MAIN ENTITIES (5 classes in client/src/models/)
+==============================================================
+
+User
+  Represents a registered teacher or student account. Fields: id, name,
+  email, password, role. Role must be teacher or student. All fields
+  required except id (auto-generated).
+
+Exam
+  Represents an exam created by a teacher. Fields: id, title, description,
+  durationMinutes (default 60), status (Draft / Published / Closed),
+  createdBy (teacher user id), questions (array of plain objects), createdAt.
+  Title and createdBy are required.
+
+Question
+  Represents a single question within an exam. Fields: id, examId, type
+  (multiple-choice or open-text), text, options (array of strings for
+  multiple-choice), correctAnswer, points (default 1). Multiple-choice
+  questions require a non-empty options array. Questions are stored as
+  plain objects inside the parent Exam; they are not a top-level collection.
+
+Submission
+  Represents a student's completed exam response. Fields: id, examId,
+  studentId, answers (array of Answer plain objects), status (submitted or
+  graded), grade (null until graded), feedback, submittedAt.
+
+Answer
+  Represents a student's response to a single question. Fields: questionId,
+  value. Embedded inside Submission; not stored as an independent collection.
+  questionId is required.
+
+==============================================================
+HOW TO RUN
+==============================================================
+
+Prerequisites: Node.js 20 or higher, npm 9 or higher.
+
+Step 1: Install client dependencies.
+  cd client
+  npm install
+
+Step 2: Start the client development server.
+  npm run dev
+  Open http://localhost:5173 in a browser.
+
+Step 3: (Optional) Start the Express skeleton server.
+  cd server
+  npm install
+  npm start
+  Server runs on http://localhost:4000
+  Health check: GET http://localhost:4000/health
+
+Demo credentials (seeded automatically on first launch):
+  Teacher: teacher@ems.dev / password
+  Student: student@ems.dev / password
+
+You may also register new accounts using the Register page. Choose the role
+(Teacher or Student) during registration.
+
+To run the test suite:
+  cd client
+  npm test
+
+==============================================================
+KNOWN LIMITATIONS
+==============================================================
+
+1. Passwords are stored in plain text in localStorage. There is no hashing
+   or salting. Do not use real personal credentials. This is resolved in
+   Milestone 2 with bcrypt.
+
+2. All data is stored in localStorage (browser storage). Data is scoped to
+   the browser and device. Clearing browser storage will reset all data.
+   There is no real database in Milestone 1.
+
+3. There is no JWT or session token. Authentication state is maintained as
+   a JSON object stored under the key ems_current_user in localStorage.
+   Any code with access to localStorage can read it.
+
+4. The Express server is a skeleton only. Sending data to the server has
+   no effect in Milestone 1. The client runs entirely on mock data.
+
+5. There is no exam timer. The durationMinutes field is stored and displayed
+   but no countdown or auto-submit is implemented.
+
+6. There is no teacher grading UI. Teachers can view submissions but cannot
+   enter a grade or feedback through the interface. The gradeSubmission()
+   service method exists but requires a UI (Milestone 2).
+
+7. The notification system (NotifyService) emits events but there is no
+   toast or alert UI component subscribed to it in Milestone 1. Notifications
+   are wired internally by services but not rendered visually for the user.
+
+8. Draft answer auto-save keys (ems_draft_<examId>_<studentId>) are cleared
+   on successful submission but not on exam closure or deletion.
+
+9. Student TakeExamPage warns on unanswered questions but does not block
+   submission. Blank answers are stored as empty strings.
+
+10. The NotFoundPage (404) is rendered for any unmatched URL but does not
+    log the missed path or report it to any monitoring service.
+
+==============================================================
+END OF DOCUMENTATION
+==============================================================

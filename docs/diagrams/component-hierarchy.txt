@@ -1,0 +1,118 @@
+Component Hierarchy — EMS
+Reflects the delivered client. Milestone 2 additions are marked [M2].
+=====================================================================
+
+App                                       client/src/app/App.jsx
+|  Checks the API is reachable before rendering anything.        [M2]
+|  Re-validates the stored session against the server — a token  [M2]
+|  can expire while the tab is closed.
+|  Shows an actionable message, with the command to start the
+|  server, if the API is down.
+|
+|  (Milestone 1 seeded a mock database here. That is gone: the
+|   data lives in PostgreSQL and is seeded with `npm run db:seed`.)
+|
++-- BrowserRouter
+    |
+    +-- AppRoutes                         client/src/app/routes.jsx
+        |  Full route table, every page nested under MainLayout.
+        |  LandingRedirect dispatches "/" by role.
+        |
+        +-- MainLayout                    components/layout/MainLayout.jsx
+            |  Persistent shell: nav bar plus <Outlet>.
+            |
+            +-- NavigationMenu            components/layout/NavigationMenu.jsx
+            |     Role-aware links. Reads auth during render rather   [M2]
+            |     than mirroring it into state.
+            |
+            +-- <Outlet>
+                |
+                +-- PUBLIC
+                |   +-- LoginPage             pages/auth/LoginPage.jsx
+                |   +-- RegisterPage          pages/auth/RegisterPage.jsx
+                |   +-- NotFoundPage          pages/NotFoundPage.jsx
+                |
+                +-- TEACHER  (wrapped in ProtectedRoute role="teacher")
+                |   |
+                |   +-- TeacherDashboard      pages/teacher/TeacherDashboard.jsx
+                |   |     Counters: exams by status, submissions awaiting grading.
+                |   |
+                |   +-- TeacherExamsPage      pages/teacher/TeacherExamsPage.jsx
+                |   |     List with status. Publish / Close actions.
+                |   |
+                |   +-- CreateExamPage        pages/teacher/CreateExamPage.jsx
+                |   |   +-- QuestionEditor    (local component)
+                |   |         Type, text, options, correct answer (a dropdown  [M2]
+                |   |         over the options, not free text), weight.        [M2]
+                |   |
+                |   +-- EditExamPage          pages/teacher/EditExamPage.jsx
+                |   |   +-- QuestionEditor    Same editor, pre-filled.
+                |   |         Sends question ids back, so the server updates    [M2]
+                |   |         in place and existing answers survive.
+                |   |
+                |   +-- GenerateExamPage      pages/teacher/GenerateExamPage.jsx   [M2]
+                |   |     Describe an exam -> AI drafts it -> review -> save.
+                |   |     Badges which provider answered. Nothing is saved
+                |   |     until the teacher confirms.
+                |   |
+                |   +-- SubmissionsPage       pages/teacher/SubmissionsPage.jsx
+                |   |     Grouped by exam, with student names and status.
+                |   |
+                |   +-- SubmissionDetailPage  pages/teacher/SubmissionDetailPage.jsx
+                |   |     Marking screen.
+                |   |     - multiple choice shown read-only (marked from the key)
+                |   |     - open text: editable score + comment              [M2]
+                |   |     - "Run AI grading" button                          [M2]
+                |   |     - "AI proposed N/100" shown beside the teacher's   [M2]
+                |   |       value, so an override is visible
+                |   |     - live total, same formula as the server           [M2]
+                |   |     - Save draft (private) / Publish (to the student)  [M2]
+                |   |
+                |   +-- AnalyticsPage         pages/teacher/AnalyticsPage.jsx      [M2]
+                |         Stat tiles, per-exam table, grade distribution
+                |         histogram, per-question difficulty, optional
+                |         AI-written summary.
+                |
+                +-- STUDENT  (wrapped in ProtectedRoute role="student")
+                    |
+                    +-- StudentDashboard      pages/student/StudentDashboard.jsx
+                    |     Counters: available, submitted, graded.
+                    |
+                    +-- AvailableExamsPage    pages/student/AvailableExamsPage.jsx
+                    |     Published exams not yet submitted.
+                    |
+                    +-- TakeExamPage          pages/student/TakeExamPage.jsx
+                    |     - starts or RESUMES an attempt; a refresh cannot   [M2]
+                    |       reset the clock
+                    |     - live countdown against the server's deadline     [M2]
+                    |     - autosaves to the SERVER, debounced 1.2s          [M2]
+                    |       (Milestone 1 saved drafts to localStorage)
+                    |     - submits automatically at zero                    [M2]
+                    |     - multiple-choice answers stored as the option
+                    |       INDEX, which is what the server marks against    [M2]
+                    |
+                    +-- GradesPage            pages/student/GradesPage.jsx
+                          Published grades and per-question feedback only.
+                          An unpublished draft is invisible — the status is
+                          even collapsed, so a student cannot tell one exists.
+
+SHARED
+======
+ProtectedRoute            components/shared/ProtectedRoute.jsx
+  Redirects an unauthenticated visitor to /login, and a user with the
+  wrong role to their own dashboard.
+  A convenience, NOT a security boundary — the server refuses the
+  request regardless.
+
+SERVICES (not components; injected via services/index.js)
+=========================================================
+config, logger, storage, notify
+api                HttpApiService — the only client code that leaves    [M2]
+                   the browser. Holds the JWT.
+auth               login, register, role checks (synchronous reads)
+examService        exam CRUD, publish, close
+submissionService  attempts, autosave, submission, grading
+aiService          generation, AI grading                               [M2]
+analyticsService   statistics                                           [M2]
+
+Pages never call fetch. Models never import services.

@@ -1,0 +1,87 @@
+@startuml SequenceAiGenerate
+' Scenario 3 — Generating an exam with the AI agent
+' Shows validation of untrusted model output and the fallback path.
+
+skinparam sequenceMessageAlign center
+skinparam maxMessageSize 210
+
+actor Teacher
+participant "GenerateExamPage" as Page
+box "Server" #F8FAFC
+  participant "aiController" as Ctrl
+  participant "AiService" as Svc
+  participant "NimProvider" as Nim
+  participant "FallbackProvider" as Fall
+  participant "ExamService" as Exams
+end box
+participant "NVIDIA NIM\n(external)" as Cloud
+database "PostgreSQL" as DB
+
+Teacher -> Page : describes the exam\n"CSS flexbox, 4 questions"
+Page -> Ctrl : POST /api/ai/exams/generate
+Ctrl -> Svc : generateExam({description, questionCount})
+
+Svc -> Svc : clamp questionCount to 1..20
+
+alt an API key is configured
+  Svc -> Nim : generateExam(spec)
+  Nim -> Cloud : POST /chat/completions\nsystem prompt + JSON schema
+  Cloud --> Nim : completion text
+  Nim -> Nim : parseJsonReply()
+  note right of Nim
+    Models fence JSON in markdown even when
+    told not to, so the reply is unwrapped
+    before parsing rather than trusted.
+  end note
+  Nim --> Svc : raw exam object
+else no key, OR the provider failed
+  Svc -> Fall : generateExam(spec)
+  note right of Fall
+    Unreachable, model retired (410),
+    timeout, or unparseable reply all land
+    here. The feature degrades; it does
+    not fail.
+  end note
+  Fall --> Svc : template exam
+end
+
+Svc -> Svc : validate the shape
+note right of Svc
+  A model's output is UNTRUSTED INPUT.
+  Repairable: weights that do not total 100.
+  Rejected: a multiple-choice question with
+  one option, or a correct answer pointing
+  outside the options — either would violate
+  a CHECK constraint and surface as a 500.
+end note
+
+alt validation fails
+  Svc -> Fall : generateExam(spec)
+  Fall --> Svc : template exam
+  Svc -> Svc : validate again
+end
+
+Svc --> Ctrl : { exam, generatedBy, modelBacked }
+Ctrl --> Page : 200
+
+note over Page, DB
+  NOTHING HAS BEEN SAVED.
+  The draft is returned for review, because a
+  generated answer key can be confident and
+  wrong — observed three times in testing.
+end note
+
+Page -> Teacher : shows the draft, badged with the provider,\nwith a warning to check every answer
+
+Teacher -> Page : reviews, edits, clicks Save
+Page -> Exams : POST /api/exams { ..., generatedByAi: true, aiPrompt }
+Exams -> DB : INSERT exam + questions
+note right of DB
+  Provenance is recorded, so the UI can badge
+  the exam and the teacher can see the prompt
+  it came from.
+end note
+Exams --> Page : the created exam (status: Draft)
+Page -> Teacher : opens the editor for final changes
+
+@enduml
