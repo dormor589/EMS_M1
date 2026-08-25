@@ -1,218 +1,332 @@
-@startuml EMS_M1_ClassDiagram
-' EMS_M1 Class Diagram — reflects actual code as built in D001-D007.
-' Source: the milestone brief §15.3
-' Entities: User, Exam, Question, Submission, Answer
-' Services: ConfigService, LoggerService, StorageService, NotifyService,
-'           MockApiService, AuthService, ExamService, SubmissionService
+@startuml EMS_ClassDiagram
+' EMS — OOP class diagram (Milestone 2)
+'
+' Covers both halves of the system. The five domain entities appear on both
+' sides with the same names and the same meaning, which is deliberate: the
+' database tables, this diagram and the API payloads all describe one model.
 
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 skinparam packageStyle rectangle
 skinparam linetype ortho
+hide empty members
 
 ' ============================================================
-' ENTITY CLASSES
+' DOMAIN ENTITIES — mirrored client and server
 ' ============================================================
 
-package "Entities (client/src/models/)" {
+package "Domain entities" #F8FAFC {
 
   class User {
-    +id : String
+    +id : UUID
     +name : String
     +email : String
-    +password : String
-    +role : String
+    +role : 'teacher' | 'student'
+    -passwordHash : String  <<server only>>
     --
-    +toJSON() : Object
-    +{static} fromJSON(obj) : User
+    +isTeacher() : boolean
+    +isStudent() : boolean
+    +toJSON() : object
+    ..
+    <i>toJSON NEVER emits passwordHash</i>
   }
 
   class Exam {
-    +id : String
+    +id : UUID
     +title : String
-    +description : String
-    +durationMinutes : Number
-    +status : String
-    +createdBy : String
-    +questions : Object[]
-    +createdAt : String
+    +durationMinutes : int
+    +passingGrade : int
+    +status : 'Draft'|'Published'|'Closed'
+    +createdBy : UUID
+    +generatedByAi : boolean
+    +aiPrompt : String
+    +questions : Question[]
     --
-    +toJSON() : Object
-    +{static} fromJSON(obj) : Exam
+    +isOwnedBy(userId) : boolean
+    +canTransitionTo(status) : boolean
+    +totalWeight() : int
+    +toJSON(includeAnswerKey) : object
   }
 
   class Question {
-    +id : String
-    +examId : String
-    +type : String
+    +id : UUID
+    +type : 'multiple-choice'|'open-text'
     +text : String
     +options : String[]
-    +correctAnswer : any
-    +points : Number
+    -correctAnswer : int
+    +weight : int
     --
-    +toJSON() : Object
-    +{static} fromJSON(obj) : Question
+    +isMultipleChoice() : boolean
+    +scoreFor(value) : int
+    +toJSON(includeAnswerKey) : object
+    ..
+    <i>correctAnswer is OMITTED unless</i>
+    <i>the caller owns the exam</i>
   }
 
   class Submission {
-    +id : String
-    +examId : String
-    +studentId : String
-    +answers : Object[]
-    +status : String
-    +grade : Number|null
-    +feedback : String
-    +submittedAt : String
+    +id : UUID
+    +status : 'in_progress'|'submitted'
+    ..    |'ai_graded'|'graded'
+    +startedAt : Date
+    +expiresAt : Date
+    +grade : Number
+    +gradedBy : 'teacher'|'ai'|'ai+teacher'
+    +needsRegrade : boolean
+    +answers : Answer[]
     --
-    +toJSON() : Object
-    +{static} fromJSON(obj) : Submission
+    +canTransitionTo(status) : boolean
+    +hasExpired(grace) : boolean
+    +secondsRemaining() : int
+    +passed(passingGrade) : boolean
+    +toJSON(forStudent) : object
+    ..
+    <i>forStudent hides an unpublished</i>
+    <i>grade AND collapses the status</i>
   }
 
   class Answer {
-    +questionId : String
-    +value : any
+    +value : String
+    +isCorrect : boolean
+    +aiScore : Number
+    +aiFeedback : String
+    +score : Number
+    +feedback : String
     --
-    +toJSON() : Object
-    +{static} fromJSON(obj) : Answer
+    +wasOverridden() : boolean
+    ..
+    <i>ai* vs final: keeping both is what</i>
+    <i>shows "AI proposed 85 → you set 92"</i>
   }
-
 }
 
 ' ============================================================
-' SERVICE CLASSES
+' CLIENT
 ' ============================================================
 
-package "Services (client/src/services/)" {
+package "Client — services" #EFF6FF {
 
-  class ConfigService {
-    +getApiMode() : String
-    +getStorageKeys() : Object
-    +getDefaultExamStatus() : String
-    +getExamStatusOptions() : String[]
+  class ConfigService <<singleton>> {
+    +getApiBaseUrl() : String
+    +getStorageKeys() : object
     +getRoles() : String[]
-    +getQuestionTypes() : String[]
   }
 
-  class LoggerService {
-    -level : String
-    --
-    +info(msg, ...args) : void
-    +warn(msg, ...args) : void
-    +error(msg, ...args) : void
-    +debug(msg, ...args) : void
-    +setLevel(level) : void
-    +getLevel() : String
+  class StorageService <<singleton>> {
+    +get(key) / set(key, v) / remove(key)
+    ..
+    <i>only code touching localStorage</i>
   }
 
-  class StorageService {
-    +get(key) : any
-    +set(key, value) : void
-    +remove(key) : void
-    +clear() : void
-    +has(key) : Boolean
+  class LoggerService <<singleton>> {
+    +info/warn/error(msg, meta)
   }
 
-  class NotifyService {
-    -listeners : Function[]
-    --
-    +success(message) : void
-    +error(message) : void
-    +warning(message) : void
-    +subscribe(listener) : Function
-    +listenerCount() : Number
+  class HttpApiService {
+    -baseUrl : String
+    +get/post/put/patch/delete(path, body)
+    +getToken() / setToken() / clearToken()
+    +health() : object
+    ..
+    <i>THE SEAM. The only client code</i>
+    <i>that leaves the browser.</i>
   }
 
-  class MockApiService {
-    -storage : StorageService
-    -config : ConfigService
-    -logger : LoggerService
-    --
-    +seedIfEmpty() : Promise<void>
-    +get(collection) : Promise<Object[]>
-    +getById(collection, id) : Promise<Object|null>
-    +post(collection, record) : Promise<Object>
-    +put(collection, id, record) : Promise<Object>
-    +delete(collection, id) : Promise<void>
-    +clear(collection) : Promise<void>
-  }
-
-  class AuthService {
-    -mockApi : MockApiService
-    -storage : StorageService
-    -config : ConfigService
-    -logger : LoggerService
-    --
-    +login(email, password) : Promise<User>
+  class ClientAuthService as "AuthService" {
+    +login(email, pw) : Promise<User>
     +register(data) : Promise<User>
-    +logout() : void
-    +getCurrentUser() : User|null
-    +isAuthenticated() : Boolean
-    +isTeacher() : Boolean
-    +isStudent() : Boolean
+    +getCurrentUser() : User   <<sync>>
+    +refreshSession() : Promise<User>
+    +isTeacher() / isStudent()
   }
 
-  class ExamService {
-    -mockApi : MockApiService
-    -config : ConfigService
-    -logger : LoggerService
-    --
-    +getAllExams() : Promise<Object[]>
-    +getPublishedExams() : Promise<Object[]>
-    +getExamsByTeacher(teacherId) : Promise<Object[]>
-    +getExamById(id) : Promise<Object|null>
-    +createExam(data) : Promise<Object>
-    +updateExam(id, partial) : Promise<Object>
-    +publishExam(id) : Promise<Object>
-    +closeExam(id) : Promise<Object>
-    +deleteExam(id) : Promise<void>
+  class ClientExamService as "ExamService" {
+    +getAllExams() / getExamById(id)
+    +createExam(data) / updateExam(id, data)
+    +publishExam(id) / closeExam(id)
   }
 
-  class SubmissionService {
-    -mockApi : MockApiService
-    -examService : ExamService
-    -config : ConfigService
-    -logger : LoggerService
-    --
-    +submitExam(data) : Promise<Object>
-    +getSubmissionsByExam(examId) : Promise<Object[]>
-    +getSubmissionsByStudent(studentId) : Promise<Object[]>
-    +getSubmissionByExamAndStudent(examId, studentId) : Promise<Object|null>
-    +gradeSubmission(id, data) : Promise<Object>
+  class ClientSubmissionService as "SubmissionService" {
+    +startAttempt(examId)
+    +saveDraft(attemptId, answers)
+    +submitExam(attemptId, {auto})
+    +gradeSubmission(id, data)
   }
 
+  class ClientAiService as "AiService" {
+    +getStatus() / generateExam(desc, n)
+    +gradeSubmission(id)
+  }
 }
 
 ' ============================================================
-' ENTITY RELATIONSHIPS
+' SERVER
 ' ============================================================
 
-User "1" --> "0..*" Exam       : creates\n(createdBy = user.id)
-User "1" --> "0..*" Submission : submits\n(studentId = user.id)
-Exam "1" *-- "0..*" Question   : contains\n(stored as plain objects)
-Exam "1" --> "0..*" Submission : receives\n(examId = exam.id)
-Submission "1" *-- "0..*" Answer : embeds\n(not a top-level collection)
-Question ..> Answer            : answered by
+package "Server — services" #F0FDF4 {
+
+  class ServerAuthService as "AuthService" {
+    +register(data) : {user, token}
+    +login(email, pw) : {user, token}
+    +issueToken(user) : String
+    +verifyToken(token) : claims
+    ..
+    <i>bcrypt + JWT</i>
+  }
+
+  class ServerExamService as "ExamService" {
+    +list(user) / get(id, user)
+    +create(data, user)
+    +update(id, data, user)
+    +changeStatus(id, status, user)
+    ..
+    <i>owns the state machine and</i>
+    <i>every ownership check</i>
+  }
+
+  class ServerSubmissionService as "SubmissionService" {
+    +startAttempt(examId, user)
+    +saveDraft(id, answers, user)
+    +submit(id, user, {auto})
+    +saveGrade(id, data, user)
+    +aiGrade(id, user)
+    +publishGrade(id, user)
+  }
+
+  class ServerAiService as "AiService" {
+    +generateExam(spec)
+    +gradeOpenAnswers(exam, submission)
+    -validateExam(raw)
+    -validateGrades(raw, items)
+    ..
+    <i>treats model output as</i>
+    <i>UNTRUSTED INPUT</i>
+  }
+
+  class AnalyticsService {
+    +forExam(id, user, opts)
+    +overview(user)
+  }
+
+  class grading <<module>> {
+    +scoreMultipleChoice(q, value)
+    +computeGrade(questions, scores)
+    ..
+    <i>pure. The ONE place a grade</i>
+    <i>is computed.</i>
+  }
+}
+
+package "Server — data access" #FEF3C7 {
+  class UserRepository {
+    +findByEmail(email) / findById(id)
+    +create(data)
+  }
+  class ExamRepository {
+    +findById(id) / findAll(filter)
+    +create(data)
+    +update(id, fields, questions)
+    -reconcileQuestions(client, id, desired)
+    ..
+    <i>UPDATEs questions in place so ids</i>
+    <i>survive and answers are not</i>
+    <i>cascade-deleted</i>
+  }
+  class SubmissionRepository {
+    +findById(id) / findAll(filter)
+    +createAttempt(data)  <<ON CONFLICT>>
+    +saveDraft(id, answers)
+    +submit(id, scored)
+    +saveGrades(id, data)
+  }
+}
+
+package "Server — AI providers" #F5F3FF {
+  abstract class AiProvider {
+    +{abstract} generateExam(spec)
+    +{abstract} gradeAnswers(items)
+    +{abstract} summariseAnalytics(stats)
+    +name : String
+    +isModelBacked : boolean
+  }
+  abstract class ModelBackedProvider {
+    +{abstract} complete(request)
+    ..
+    <i>implements all three tasks</i>
+    <i>by prompting</i>
+  }
+  class NimProvider {
+    -model : String
+    +complete(request)
+  }
+  class FallbackProvider {
+    +generateExam(spec)
+    +gradeAnswers(items)
+    ..
+    <i>deterministic, no network</i>
+  }
+}
+
+package "Server — HTTP" #FEE2E2 {
+  class Middleware <<module>> {
+    +authenticate(req, res, next)
+    +requireRole(role)
+    +validate(schema, source)
+    +errorHandler(err, req, res, next)
+  }
+  class ApiError {
+    +status : int
+    +details : object
+    +{static} badRequest/unauthorized/
+    ..forbidden/notFound/conflict()
+  }
+}
 
 ' ============================================================
-' SERVICE DEPENDENCY RELATIONSHIPS (constructor injection)
+' RELATIONSHIPS
 ' ============================================================
 
-MockApiService    ..> StorageService  : uses
-MockApiService    ..> ConfigService   : uses
-MockApiService    ..> LoggerService   : uses
+User "1" --> "0..*" Exam        : creates
+User "1" --> "0..*" Submission  : sits
+Exam "1" *-- "0..*" Question    : contains
+Exam "1" --> "0..*" Submission  : receives
+Submission "1" *-- "0..*" Answer : consists of
+Question "1" --> "0..*" Answer  : is answered by
 
-AuthService       ..> MockApiService  : uses
-AuthService       ..> StorageService  : uses
-AuthService       ..> ConfigService   : uses
-AuthService       ..> LoggerService   : uses
+' Client wiring (constructor injection, in services/index.js)
+HttpApiService ..> ConfigService
+HttpApiService ..> StorageService
+ClientAuthService ..> HttpApiService
+ClientExamService ..> HttpApiService
+ClientSubmissionService ..> HttpApiService
+ClientAiService ..> HttpApiService
 
-ExamService       ..> MockApiService  : uses
-ExamService       ..> ConfigService   : uses
-ExamService       ..> LoggerService   : uses
+' Server wiring
+ServerAuthService ..> UserRepository
+ServerExamService ..> ExamRepository
+ServerExamService ..> SubmissionRepository
+ServerSubmissionService ..> SubmissionRepository
+ServerSubmissionService ..> ExamRepository
+ServerSubmissionService ..> ServerAiService
+ServerSubmissionService ..> grading
+ServerAiService ..> AiProvider
+AnalyticsService ..> ServerAiService
 
-SubmissionService ..> MockApiService  : uses
-SubmissionService ..> ExamService     : uses
-SubmissionService ..> ConfigService   : uses
-SubmissionService ..> LoggerService   : uses
+ModelBackedProvider --|> AiProvider
+NimProvider --|> ModelBackedProvider
+FallbackProvider --|> AiProvider
+
+' The two halves meet here
+ClientAuthService ..> User
+ServerAuthService ..> User
+
+note as N1
+  <b>Why entities appear once, used by both sides</b>
+  The client and server define the same five classes
+  with the same names. The client's version maps API
+  JSON; the server's maps database rows. Keeping them
+  aligned is what lets the ERD, this diagram and the
+  API payloads describe a single model.
+end note
 
 @enduml

@@ -13,7 +13,7 @@ describe('ConfigService', () => {
   // ── getApiMode ──────────────────────────────────────────────────────────────
   describe('getApiMode()', () => {
     it('returns "mock" in M1', () => {
-      expect(config.getApiMode()).toBe('mock');
+      expect(config.getApiMode()).toBe('live');
     });
 
     it('returns a string', () => {
@@ -44,6 +44,8 @@ describe('ConfigService', () => {
         exams: 'ems_exams',
         submissions: 'ems_submissions',
         currentUser: 'ems_current_user',
+        // Added in Milestone 2: the JWT replaces M1's stored plaintext password.
+        authToken: 'ems_auth_token',
       });
     });
   });

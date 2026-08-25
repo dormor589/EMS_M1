@@ -1,10 +1,11 @@
-@startuml EMS_M1_UseCaseDiagram
-' EMS_M1 Use Case Diagram — reflects features implemented in D001-D007.
+@startuml EMS_UseCaseDiagram
+' EMS Use Case Diagram — every capability in the delivered system.
+' Milestone 1 built the exam and submission flows; Milestone 2 added the AI
+' generation, AI-assisted grading, the publish gate and analytics.
 ' Source: the milestone brief §15.2
 '
-' Notes on M1 scope:
-'   - Grade Submission: service stub exists (gradeSubmission()) but
-'     there is no teacher grading UI. Shown as <<M2>> to reflect reality.
+' Notes:
+'   - Grade Submission is per-question and AI-assisted, behind a publish gate.
 '   - Register is available to both Teacher and Student actors.
 
 left to right direction
@@ -16,7 +17,7 @@ actor Teacher
 actor Student
 actor "Guest\n(Unauthenticated)" as Guest
 
-rectangle "Exam Management System — Milestone 1" {
+rectangle "Exam Management System" {
 
   ' ── Shared / Auth ─────────────────────────────────────────────────────────
   package "Authentication" {
@@ -32,11 +33,16 @@ rectangle "Exam Management System — Milestone 1" {
     usecase "Add Multiple-Choice Question"                       as UC_AddMC
     usecase "Add Open-Text Question"                             as UC_AddOT
     usecase "Edit Exam"                                          as UC_Edit
+    usecase "Generate Exam with AI\n(describe it, review the draft)"  as UC_AIGen
+    usecase "Run AI Grading\n(marks open answers, draft only)"        as UC_AIGrade
+    usecase "Edit AI-proposed Marks"                                   as UC_EditMarks
+    usecase "Publish Grade to Student"                                 as UC_Publish
+    usecase "View Analytics\n(distribution, per-question difficulty)" as UC_Analytics
     usecase "Publish Exam\n(Draft -> Published)"                 as UC_Publish
     usecase "Close Exam\n(Published -> Closed)"                  as UC_Close
     usecase "View My Exams\n(list with status)"                  as UC_ExamList
     usecase "View Submissions\n(grouped by exam)"                as UC_ViewSubs
-    usecase "Grade Submission\n<<M2 - service stub only>>"       as UC_Grade
+    usecase "Grade Submission\n(per question, editable)"       as UC_Grade
   }
 
   ' ── Student Use Cases ────────────────────────────────────────────────────
@@ -46,7 +52,7 @@ rectangle "Exam Management System — Milestone 1" {
     usecase "Take Exam\n(answer questions)"                             as UC_Take
     usecase "Answer Multiple-Choice\n(radio button selection)"          as UC_AnswerMC
     usecase "Answer Open-Text\n(textarea input)"                        as UC_AnswerOT
-    usecase "Auto-Save Draft Answers\n(StorageService, per refresh)"    as UC_Draft
+    usecase "Auto-Save Draft Answers\n(to the server, debounced)"    as UC_Draft
     usecase "Submit Answers\n(one submission per exam)"                 as UC_Submit
     usecase "View Grades and Feedback"                                  as UC_Grades
   }
@@ -59,6 +65,11 @@ Guest --> UC_Login
 
 ' ── Teacher associations ─────────────────────────────────────────────────────
 Teacher --> UC_Login
+Teacher --> UC_AIGen
+Teacher --> UC_AIGrade
+Teacher --> UC_EditMarks
+Teacher --> UC_Publish
+Teacher --> UC_Analytics
 Teacher --> UC_Logout
 Teacher --> UC_TDash
 Teacher --> UC_Create
@@ -87,25 +98,11 @@ UC_Take ..> UC_AnswerMC : <<include>>
 UC_Take ..> UC_AnswerOT : <<include>>
 UC_Take ..> UC_Draft    : <<include>>
 
-' ── State machine note ───────────────────────────────────────────────────────
-note right of UC_Publish
-  State machine enforced in ExamService:
-  Draft -> Published (publishExam)
-  Published -> Closed (closeExam)
-  Direct Draft -> Closed is rejected.
-end note
-
-note right of UC_Submit
-  SubmissionService guard:
-  Only Published exams accepted.
-  One submission per (examId, studentId).
-  Duplicate submit throws "Already submitted".
-end note
-
-note right of UC_Grade
-  M2: gradeSubmission() service method
-  exists as a stub. Teacher grading UI
-  and real grade entry are Milestone 2.
+' ── Notes ──────────────────────────────────────────────────────────────
+note as N_Publish
+  Grading is teacher-triggered and two-stage:
+  AI or manual marks produce a DRAFT, invisible
+  to the student. Only "Publish Grade" releases it.
 end note
 
 @enduml

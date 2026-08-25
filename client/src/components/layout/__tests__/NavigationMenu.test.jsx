@@ -9,7 +9,7 @@
  * Source: the milestone brief §5.1 — role-based navigation
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter }   from 'react-router-dom';
 import NavigationMenu     from '../NavigationMenu.jsx';

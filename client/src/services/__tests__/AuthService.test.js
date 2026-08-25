@@ -1,210 +1,177 @@
 /**
- * AuthService unit tests.
+ * AuthService tests — Milestone 2.
  *
- * Uses the real singletons (mockApi, storage, config, logger) with a fresh
- * jsdom localStorage cleared before each test. Seed data is loaded per-test
- * so the teacher@ems.dev / password credentials are always available.
- *
- * Source: the milestone brief §8 — AuthService
+ * Milestone 1 tested plaintext password comparison against a localStorage mock.
+ * That behaviour is gone: the server verifies a bcrypt hash and returns a JWT,
+ * so these tests assert the HTTP contract and, above all, that no password ever
+ * reaches browser storage.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import AuthService from '../AuthService.js';
-import storage     from '../StorageService.js';
-import config      from '../ConfigService.js';
-import logger      from '../LoggerService.js';
-import MockApiService from '../MockApiService.js';
+import config from '../ConfigService.js';
+import { makeFakeApi, apiError } from './helpers/fakeApi.js';
 
-// Silence logger output during tests.
-beforeEach(() => {
-  vi.spyOn(console, 'info').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  localStorage.clear();
-});
+const KEYS = config.getStorageKeys();
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+const TEACHER = {
+  id: 'u1', name: 'Alice Teacher', email: 'teacher@ems.dev', role: 'teacher',
+};
 
-/** Fresh wired AuthService + mockApi per test (localStorage cleared above). */
-async function mkAuth() {
-  const mockApi = new MockApiService(storage, config, logger);
-  await mockApi.seedIfEmpty(); // loads teacher@ems.dev + student@ems.dev
-  return new AuthService(mockApi, storage, config, logger);
+/** In-memory stand-in for StorageService. */
+function makeStorage() {
+  const data = new Map();
+  return {
+    data,
+    get: (k) => (data.has(k) ? data.get(k) : null),
+    set: vi.fn((k, v) => data.set(k, v)),
+    remove: vi.fn((k) => data.delete(k)),
+  };
 }
 
-// ── Constructor guard ──────────────────────────────────────────────────────────
-describe('AuthService constructor', () => {
-  it('throws when mockApi is missing', () => {
-    expect(() => new AuthService(null, storage, config, logger)).toThrow(/mockApi/);
-  });
-});
+const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-// ── login ──────────────────────────────────────────────────────────────────────
-describe('login()', () => {
-  it('returns a User on valid seed teacher credentials', async () => {
-    const auth = await mkAuth();
-    const user = await auth.login('teacher@ems.dev', 'password');
-    expect(user.email).toBe('teacher@ems.dev');
-    expect(user.role).toBe('teacher');
-  });
+describe('AuthService', () => {
+  let storage;
+  beforeEach(() => { storage = makeStorage(); vi.clearAllMocks(); });
 
-  it('returns a User on valid seed student credentials', async () => {
-    const auth = await mkAuth();
-    const user = await auth.login('student@ems.dev', 'password');
-    expect(user.email).toBe('student@ems.dev');
-    expect(user.role).toBe('student');
-  });
+  describe('login', () => {
+    it('posts the credentials and stores the token and user', async () => {
+      const api = makeFakeApi({ 'POST /auth/login': { user: TEACHER, token: 'jwt-abc' } });
+      const auth = new AuthService(api, storage, config, logger);
 
-  it('throws "Invalid credentials" on wrong password', async () => {
-    const auth = await mkAuth();
-    await expect(auth.login('teacher@ems.dev', 'wrongpass')).rejects.toThrow('Invalid credentials');
-  });
+      const user = await auth.login('teacher@ems.dev', 'password');
 
-  it('throws "Invalid credentials" on unknown email', async () => {
-    const auth = await mkAuth();
-    await expect(auth.login('nobody@ems.dev', 'password')).rejects.toThrow('Invalid credentials');
-  });
+      expect(api.calls[0]).toEqual({
+        method: 'POST', path: '/auth/login',
+        body: { email: 'teacher@ems.dev', password: 'password' },
+      });
+      expect(api.setToken).toHaveBeenCalledWith('jwt-abc');
+      expect(storage.get(KEYS.currentUser)).toEqual(TEACHER);
+      expect(user.role).toBe('teacher');
+    });
 
-  it('throws "Invalid credentials" when email is empty', async () => {
-    const auth = await mkAuth();
-    await expect(auth.login('', 'password')).rejects.toThrow('Invalid credentials');
-  });
+    it('NEVER writes a password into storage', async () => {
+      const api = makeFakeApi({ 'POST /auth/login': { user: TEACHER, token: 'jwt-abc' } });
+      await new AuthService(api, storage, config, logger).login('teacher@ems.dev', 'hunter2');
 
-  it('persists user to storage so getCurrentUser() returns them', async () => {
-    const auth = await mkAuth();
-    await auth.login('teacher@ems.dev', 'password');
-    const current = auth.getCurrentUser();
-    expect(current).not.toBeNull();
-    expect(current.email).toBe('teacher@ems.dev');
-  });
-});
+      const everythingStored = JSON.stringify([...storage.data.values()]);
+      expect(everythingStored).not.toContain('hunter2');
+      expect(everythingStored).not.toContain('password');
+    });
 
-// ── register ───────────────────────────────────────────────────────────────────
-describe('register()', () => {
-  it('creates a new user and auto-logs them in', async () => {
-    const auth = await mkAuth();
-    const user = await auth.register({ name: 'New User', email: 'new@ems.dev', password: 'pass', role: 'student' });
-    expect(user.email).toBe('new@ems.dev');
-    expect(auth.getCurrentUser().email).toBe('new@ems.dev');
+    it('rejects empty credentials without calling the API', async () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
+
+      await expect(auth.login('', '')).rejects.toThrow(/email and password/i);
+      expect(api.calls).toHaveLength(0);
+    });
+
+    it('propagates the server’s rejection and stores nothing', async () => {
+      const api = makeFakeApi({ 'POST /auth/login': apiError(401, 'Invalid email or password') });
+      const auth = new AuthService(api, storage, config, logger);
+
+      await expect(auth.login('nobody@ems.dev', 'wrong')).rejects.toThrow('Invalid email or password');
+      expect(storage.get(KEYS.currentUser)).toBeNull();
+    });
   });
 
-  it('persists the new user in the mock DB', async () => {
-    const mockApi = new MockApiService(storage, config, logger);
-    await mockApi.seedIfEmpty();
-    const auth = new AuthService(mockApi, storage, config, logger);
+  describe('register', () => {
+    it('validates locally before calling the API', async () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
 
-    await auth.register({ name: 'T', email: 't@ems.dev', password: 'pass', role: 'teacher' });
-    const users = await mockApi.get('users');
-    expect(users.find((u) => u.email === 't@ems.dev')).toBeTruthy();
+      await expect(auth.register({ name: 'A', email: 'bad', password: 'password1', role: 'student' }))
+        .rejects.toThrow(/valid email/i);
+      await expect(auth.register({ name: 'A', email: 'a@b.co', password: 'short', role: 'student' }))
+        .rejects.toThrow(/at least 8/i);
+      await expect(auth.register({ name: 'A', email: 'a@b.co', password: 'password1', role: 'admin' }))
+        .rejects.toThrow(/invalid role/i);
+
+      expect(api.calls).toHaveLength(0);
+    });
+
+    it('signs the new account in on success', async () => {
+      const api = makeFakeApi({ 'POST /auth/register': { user: TEACHER, token: 'jwt-new' } });
+      const auth = new AuthService(api, storage, config, logger);
+
+      await auth.register({ name: 'Alice', email: 'teacher@ems.dev', password: 'password1', role: 'teacher' });
+
+      expect(api.setToken).toHaveBeenCalledWith('jwt-new');
+      expect(auth.isAuthenticated()).toBe(true);
+    });
   });
 
-  it('throws "Email already registered" on duplicate email', async () => {
-    const auth = await mkAuth();
-    await expect(
-      auth.register({ name: 'X', email: 'teacher@ems.dev', password: 'pass', role: 'student' })
-    ).rejects.toThrow('Email already registered');
-  });
+  describe('session', () => {
+    it('reads the current user synchronously, as the route guards need', () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
+      storage.set(KEYS.currentUser, TEACHER);
 
-  it('throws on invalid email format', async () => {
-    const auth = await mkAuth();
-    await expect(
-      auth.register({ name: 'X', email: 'notanemail', password: 'pass', role: 'student' })
-    ).rejects.toThrow(/invalid email/i);
-  });
+      // Not a promise: ProtectedRoute and NavigationMenu call this during render.
+      expect(auth.getCurrentUser().email).toBe('teacher@ems.dev');
+      expect(auth.isTeacher()).toBe(true);
+      expect(auth.isStudent()).toBe(false);
+    });
 
-  it('throws when password is too short', async () => {
-    const auth = await mkAuth();
-    await expect(
-      auth.register({ name: 'X', email: 'x@ems.dev', password: 'ab', role: 'student' })
-    ).rejects.toThrow(/password/i);
-  });
+    it('logout clears both the token and the cached user', () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
+      storage.set(KEYS.currentUser, TEACHER);
 
-  it('throws when name is missing', async () => {
-    const auth = await mkAuth();
-    await expect(
-      auth.register({ name: '', email: 'x@ems.dev', password: 'pass', role: 'student' })
-    ).rejects.toThrow(/name/i);
-  });
-});
+      auth.logout();
 
-// ── logout ─────────────────────────────────────────────────────────────────────
-describe('logout()', () => {
-  it('clears the current user from storage', async () => {
-    const auth = await mkAuth();
-    await auth.login('teacher@ems.dev', 'password');
-    expect(auth.getCurrentUser()).not.toBeNull();
-    auth.logout();
-    expect(auth.getCurrentUser()).toBeNull();
-  });
+      expect(api.clearToken).toHaveBeenCalled();
+      expect(auth.getCurrentUser()).toBeNull();
+    });
 
-  it('isAuthenticated() returns false after logout', async () => {
-    const auth = await mkAuth();
-    await auth.login('teacher@ems.dev', 'password');
-    auth.logout();
-    expect(auth.isAuthenticated()).toBe(false);
-  });
-});
+    it('clears a corrupt stored user instead of throwing', () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
+      storage.set(KEYS.currentUser, { garbage: true });
 
-// ── getCurrentUser / isAuthenticated ──────────────────────────────────────────
-describe('getCurrentUser() + isAuthenticated()', () => {
-  it('returns null when no session exists', async () => {
-    const auth = await mkAuth();
-    expect(auth.getCurrentUser()).toBeNull();
-    expect(auth.isAuthenticated()).toBe(false);
-  });
+      expect(auth.getCurrentUser()).toBeNull();
+      expect(storage.remove).toHaveBeenCalledWith(KEYS.currentUser);
+    });
 
-  it('returns User after login', async () => {
-    const auth = await mkAuth();
-    await auth.login('student@ems.dev', 'password');
-    expect(auth.isAuthenticated()).toBe(true);
-    expect(auth.getCurrentUser().role).toBe('student');
-  });
-});
+    it('clears the session when the API rejects the token', () => {
+      const api = makeFakeApi({});
+      new AuthService(api, storage, config, logger);
+      storage.set(KEYS.currentUser, TEACHER);
 
-// ── isTeacher / isStudent ──────────────────────────────────────────────────────
-describe('isTeacher() + isStudent()', () => {
-  it('isTeacher() returns true when logged in as teacher', async () => {
-    const auth = await mkAuth();
-    await auth.login('teacher@ems.dev', 'password');
-    expect(auth.isTeacher()).toBe(true);
-    expect(auth.isStudent()).toBe(false);
-  });
+      api.onUnauthorized();
 
-  it('isStudent() returns true when logged in as student', async () => {
-    const auth = await mkAuth();
-    await auth.login('student@ems.dev', 'password');
-    expect(auth.isStudent()).toBe(true);
-    expect(auth.isTeacher()).toBe(false);
-  });
+      expect(storage.remove).toHaveBeenCalledWith(KEYS.currentUser);
+    });
 
-  it('both return false when not authenticated', async () => {
-    const auth = await mkAuth();
-    expect(auth.isTeacher()).toBe(false);
-    expect(auth.isStudent()).toBe(false);
-  });
-});
+    it('refreshSession does nothing without a token', async () => {
+      const api = makeFakeApi({});
+      const auth = new AuthService(api, storage, config, logger);
 
-// ── getUserById (D010) ──────────────────────────────────────────────────────────
-describe('getUserById()', () => {
-  it('returns the user record for a known seeded user id', async () => {
-    const auth = await mkAuth();
-    const teacher = await auth.login('teacher@ems.dev', 'password');
-    const found = await auth.getUserById(teacher.id);
-    expect(found).not.toBeNull();
-    expect(found.email).toBe('teacher@ems.dev');
-    expect(found.role).toBe('teacher');
-  });
+      expect(await auth.refreshSession()).toBeNull();
+      expect(api.calls).toHaveLength(0);
+    });
 
-  it('returns null for an unknown id', async () => {
-    const auth = await mkAuth();
-    const result = await auth.getUserById('non-existent-user-id');
-    expect(result).toBeNull();
-  });
+    it('refreshSession refreshes the cached user from /auth/me', async () => {
+      const api = makeFakeApi({ 'GET /auth/me': { user: { ...TEACHER, name: 'Renamed' } } });
+      api.setToken('jwt-abc');
+      const auth = new AuthService(api, storage, config, logger);
 
-  it('throws when id is missing', async () => {
-    const auth = await mkAuth();
-    await expect(auth.getUserById('')).rejects.toThrow(/id/i);
+      const user = await auth.refreshSession();
+
+      expect(user.name).toBe('Renamed');
+      expect(storage.get(KEYS.currentUser).name).toBe('Renamed');
+    });
+
+    it('keeps a valid session when the API is merely unreachable', async () => {
+      const api = makeFakeApi({ 'GET /auth/me': new Error('Cannot reach the server') });
+      api.setToken('jwt-abc');
+      const auth = new AuthService(api, storage, config, logger);
+      storage.set(KEYS.currentUser, TEACHER);
+
+      // A network blip must not log a legitimate user out.
+      expect((await auth.refreshSession()).email).toBe('teacher@ems.dev');
+    });
   });
 });

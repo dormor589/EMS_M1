@@ -12,10 +12,10 @@ function NotFoundPage() {
   const home = user ? (user.role === 'teacher' ? '/teacher' : '/student') : '/login';
 
   return (
-    <div style={{ textAlign: 'center', padding: '4rem', fontFamily: 'sans-serif' }}>
+    <div className="ems-404">
       <h1>404 — Page Not Found</h1>
       <p>The page you requested does not exist.</p>
-      <Link to={home}>Go to home</Link>
+      <Link to={home} className="ems-btn ems-btn--secondary">Go to home</Link>
     </div>
   );
 }

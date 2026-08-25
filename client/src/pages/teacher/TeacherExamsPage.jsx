@@ -33,7 +33,10 @@ function TeacherExamsPage() {
       navigate('/login');
       return;
     }
-    setLoading(true);
+    // No setLoading(true) here: the initial value is already true, and a
+    // refetch after publish/close resolves fast enough that flashing a
+    // spinner over the existing list is worse than leaving it briefly stale.
+    // Setting it synchronously would also cascade a render from the effect.
     examService
       .getExamsByTeacher(user.id)
       .then((data) => setExams(data))
@@ -93,7 +96,7 @@ function TeacherExamsPage() {
     <div className="ems-page">
       <h1 className="ems-page__title">My Exams</h1>
 
-      <div style={{ marginBottom: '1rem' }}>
+      <div className="ems-toolbar">
         <Link to="/teacher/exams/new" className="ems-btn ems-btn--primary">
           + Create New Exam
         </Link>

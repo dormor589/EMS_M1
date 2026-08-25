@@ -1,169 +1,216 @@
 /**
- * TakeExamPage — exam-taking view with per-question answer inputs.
+ * TakeExamPage — sitting an exam.
  *
- * Question rendering per spec §7:
- *   • multiple-choice → radio buttons, one per option
- *   • open-text       → textarea
+ * Milestone 1 collected answers in React state, saved a draft to localStorage,
+ * and posted everything once at the end. Milestone 2 makes the attempt a real
+ * server-side record:
  *
- * Entry guards (checked on load):
- *   1. Exam must exist.
- *   2. Exam must be Published — student cannot take a Draft or Closed exam.
- *   3. Student must not have already submitted this exam — redirect to /student/grades.
+ *   1. Opening the page starts (or resumes) an attempt. The server fixes the
+ *      deadline, so refreshing cannot buy more time.
+ *   2. Answers autosave to the server, debounced. Closing the tab loses nothing,
+ *      and the draft follows the student to another machine.
+ *   3. A countdown runs to the server's deadline and submits automatically at
+ *      zero. The server accepts that submission even though it arrives late,
+ *      because the answers were captured before expiry.
  *
- * Draft auto-save (Nice-to-Have §5.2):
- *   Answers are saved to StorageService on every change under the key
- *   `ems_draft_${examId}_${studentId}`.  On mount the draft is rehydrated
- *   so the student can resume if they navigate away.  The draft is cleared
- *   after a successful submit.
- *
- * Submit:
- *   Calls SubmissionService.submitExam(). On success clears draft, notifies,
- *   navigates to /student/grades.
- *
- * Validation: warns (inline) if questions are left unanswered, but allows
- * submission (M2 will enforce stricter rules).
- *
- * No business logic in JSX — all service calls delegate to SubmissionService.
+ * Multiple-choice answers are stored as the OPTION INDEX, which is what the
+ * server marks against. Milestone 1 stored the option text.
  *
  * Source: the milestone brief §5.1 — Student can open an exam and submit
- * Source: the milestone brief §7 — Question types: multiple-choice, open-text
+ * Source: the milestone brief §7 — Question types
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { auth, examService, submissionService, storage, notify } from '../../services/index.js';
+import { submissionService, notify } from '../../services/index.js';
 
-/** StorageService key for a student's in-progress draft answers. */
-const draftKey = (examId, studentId) => `ems_draft_${examId}_${studentId}`;
+/** Idle time before an edit is pushed to the server. */
+const AUTOSAVE_DELAY_MS = 1200;
+
+/** Below this many seconds the timer turns red. */
+const TIMER_WARNING_SECONDS = 60;
+
+/**
+ * Format seconds as mm:ss (or h:mm:ss beyond an hour).
+ *
+ * @param {number} total
+ * @returns {string}
+ */
+function formatTime(total) {
+  const s = Math.max(0, total);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(seconds).padStart(2, '0');
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`;
+}
 
 function TakeExamPage() {
   const { id: examId } = useParams();
-  const navigate        = useNavigate();
+  const navigate = useNavigate();
 
-  const [exam,          setExam]          = useState(null);
-  const [answers,       setAnswers]       = useState({});  // { [questionId]: string }
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState('');
-  const [submitting,    setSubmitting]    = useState(false);
+  const [exam,      setExam]      = useState(null);
+  const [answers,   setAnswers]   = useState({});   // { [questionId]: string }
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved
+  const [remaining, setRemaining] = useState(null);
   const [unansweredIds, setUnansweredIds] = useState([]);
 
-  // ── Load exam + guard checks ───────────────────────────────────────────────
+  // Refs, not state: the autosave timer and the submit guard must not trigger
+  // re-renders, and the countdown callback needs the latest values without
+  // being re-created every second.
+  const saveTimer   = useRef(null);
+  const submittedRef = useRef(false);
+  const answersRef  = useRef({});
+  const attemptRef  = useRef(null);
 
-  const loadExam = useCallback(() => {
-    const user = auth.getCurrentUser();
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+  // ── Start or resume the attempt ──────────────────────────────────────────
 
-    Promise.all([
-      examService.getExamById(examId),
-      submissionService.getSubmissionByExamAndStudent(examId, user.id),
-    ])
-      .then(([foundExam, existingSubmission]) => {
-        // Guard 1: exam not found
-        if (!foundExam) {
-          setError('Exam not found.');
-          setLoading(false);
-          return;
-        }
+  useEffect(() => {
+    let cancelled = false;
 
-        // Guard 2: exam not Published (critical — students must not see Draft/Closed)
-        if (foundExam.status !== 'Published') {
-          setError(
-            `This exam is not currently available (status: ${foundExam.status}).`
-          );
-          setLoading(false);
-          return;
-        }
+    submissionService
+      .startAttempt(examId)
+      .then((started) => {
+        if (cancelled) return;
 
-        // Guard 3: already submitted — redirect to grades
-        if (existingSubmission) {
-          navigate('/student/grades', { replace: true });
-          return;
-        }
+        // Held in a ref, not state: the id and deadline are read by callbacks
+        // and never rendered, so storing them in state would re-render for
+        // nothing.
+        attemptRef.current = started;
+        setExam(started.exam);
+        setRemaining(started.secondsRemaining);
 
-        setExam(foundExam);
-
-        // Rehydrate draft answers if available (Nice-to-Have §5.2).
-        const draft = storage.get(draftKey(examId, user.id));
-        if (draft && typeof draft === 'object') {
-          setAnswers(draft);
-        }
+        // Rehydrate whatever was autosaved previously.
+        const restored = {};
+        for (const a of started.answers || []) restored[a.questionId] = a.value;
+        setAnswers(restored);
+        answersRef.current = restored;
 
         setLoading(false);
       })
       .catch((err) => {
+        if (cancelled) return;
+        // Already submitted: the student belongs on their grades page.
+        if (/already submitted/i.test(err.message)) {
+          navigate('/student/grades', { replace: true });
+          return;
+        }
         setError(err.message);
         setLoading(false);
       });
+
+    return () => { cancelled = true; };
   }, [examId, navigate]);
 
-  useEffect(() => {
-    loadExam();
-  }, [loadExam]);
+  // ── Submit ───────────────────────────────────────────────────────────────
 
-  // ── Answer change handler — also auto-saves draft ─────────────────────────
+  const doSubmit = useCallback(
+    async ({ auto }) => {
+      if (submittedRef.current || !attemptRef.current) return;
+      submittedRef.current = true;
+      setSubmitting(true);
 
-  function handleAnswer(questionId, value) {
-    setAnswers((prev) => {
-      const updated = { ...prev, [questionId]: value };
-
-      // Auto-save draft to StorageService (Nice-to-Have §5.2).
-      // StorageService is the ONLY file allowed to touch localStorage.
-      const user = auth.getCurrentUser();
-      if (user) {
-        storage.set(draftKey(examId, user.id), updated);
+      // Flush any pending autosave first, so the last keystrokes are not lost.
+      clearTimeout(saveTimer.current);
+      try {
+        await submissionService.saveDraft(
+          attemptRef.current.id,
+          Object.entries(answersRef.current).map(([questionId, value]) => ({ questionId, value }))
+        );
+      } catch {
+        // An autosave failure must not block the submission itself.
       }
 
-      return updated;
-    });
-  }
+      try {
+        await submissionService.submitExam(attemptRef.current.id, { auto });
+        notify.success(auto ? 'Time is up — your exam was submitted.' : 'Exam submitted.');
+        navigate('/student/grades');
+      } catch (err) {
+        submittedRef.current = false;
+        setSubmitting(false);
+        notify.error(err.message);
+      }
+    },
+    [navigate]
+  );
 
-  // ── Submit ────────────────────────────────────────────────────────────────
+  // ── Countdown ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (remaining === null || loading) return undefined;
+
+    if (remaining <= 0) {
+      // Deferred rather than called inline: doSubmit sets state before its
+      // first await, and setting state synchronously inside an effect causes
+      // a cascading render.
+      const fire = setTimeout(() => doSubmit({ auto: true }), 0);
+      return () => clearTimeout(fire);
+    }
+
+    const tick = setTimeout(() => setRemaining((r) => r - 1), 1000);
+    return () => clearTimeout(tick);
+  }, [remaining, loading, doSubmit]);
+
+  // Clean up a pending autosave if the student navigates away.
+  useEffect(() => () => clearTimeout(saveTimer.current), []);
+
+  // ── Answering ────────────────────────────────────────────────────────────
+
+  /**
+   * Record an answer and schedule an autosave.
+   *
+   * Debounced so typing a sentence produces one request rather than one per
+   * keystroke.
+   *
+   * @param {string} questionId
+   * @param {string} value
+   */
+  function handleAnswer(questionId, value) {
+    const updated = { ...answersRef.current, [questionId]: value };
+    answersRef.current = updated;
+    setAnswers(updated);
+
+    clearTimeout(saveTimer.current);
+    setSaveState('saving');
+    saveTimer.current = setTimeout(async () => {
+      if (submittedRef.current) return;
+      try {
+        await submissionService.saveDraft(
+          attemptRef.current.id,
+          Object.entries(updated).map(([qid, v]) => ({ questionId: qid, value: v }))
+        );
+        setSaveState('saved');
+      } catch (err) {
+        setSaveState('idle');
+        notify.error(`Could not save your answer: ${err.message}`);
+      }
+    }, AUTOSAVE_DELAY_MS);
+  }
 
   function handleSubmit(e) {
     e.preventDefault();
 
-    const user = auth.getCurrentUser();
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    // Warn on unanswered questions (soft — do not block submission).
     const missing = (exam.questions || [])
-      .filter((q) => !answers[q.id] || answers[q.id].trim() === '')
+      .filter((q) => {
+        const v = answers[q.id];
+        return v === undefined || String(v).trim() === '';
+      })
       .map((q) => q.id);
     setUnansweredIds(missing);
 
-    // Build answers array: { questionId, value } per spec §7 — Answer entity.
-    const answersPayload = (exam.questions || []).map((q) => ({
-      questionId: q.id,
-      value:      answers[q.id] || '',
-    }));
-
-    setSubmitting(true);
-    submissionService
-      .submitExam({ examId: exam.id, studentId: user.id, answers: answersPayload })
-      .then(() => {
-        // Clear draft on successful submit.
-        storage.remove(draftKey(examId, user.id));
-        notify.success('Exam submitted successfully!');
-        navigate('/student/grades');
-      })
-      .catch((err) => {
-        notify.error(err.message);
-        setSubmitting(false);
-      });
+    doSubmit({ auto: false });
   }
 
-  // ── Early exits ───────────────────────────────────────────────────────────
+  // ── Early exits ──────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="ems-page">
-        <h1 className="ems-page__title">Loading Exam…</h1>
+      <div className="ems-page ems-page--exam">
+        <h1 className="ems-page__title">Opening exam…</h1>
         <p className="ems-loading">Please wait…</p>
       </div>
     );
@@ -171,38 +218,52 @@ function TakeExamPage() {
 
   if (error) {
     return (
-      <div className="ems-page">
-        <h1 className="ems-page__title">Exam Unavailable</h1>
+      <div className="ems-page ems-page--exam">
+        <h1 className="ems-page__title">Exam unavailable</h1>
         <p className="ems-form__error">{error}</p>
         <Link to="/student/exams" className="ems-btn ems-btn--secondary">
-          Back to Available Exams
+          Back to available exams
         </Link>
       </div>
     );
   }
 
   const questions = exam.questions || [];
+  const lowOnTime = remaining !== null && remaining <= TIMER_WARNING_SECONDS;
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="ems-page">
-      <h1 className="ems-page__title">{exam.title}</h1>
+    <div className="ems-page ems-page--exam">
+      <div className="ems-exam-header">
+        <div>
+          <h1 className="ems-page__title">{exam.title}</h1>
+          {exam.description && <p className="ems-page__subtitle">{exam.description}</p>}
+        </div>
 
-      {exam.description && (
-        <p className="ems-page__subtitle">{exam.description}</p>
-      )}
+        <div
+          className={`ems-timer ${lowOnTime ? 'ems-timer--warning' : ''}`}
+          role="timer"
+          aria-live={lowOnTime ? 'assertive' : 'off'}
+        >
+          <span className="ems-timer__label">Time remaining</span>
+          <span className="ems-timer__value">{formatTime(remaining ?? 0)}</span>
+        </div>
+      </div>
 
-      <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        Duration: <strong>{exam.durationMinutes} minutes</strong> ·{' '}
+      <p className="ems-exam-meta">
         {questions.length} question{questions.length !== 1 ? 's' : ''}
+        {' · '}
+        <span className={`ems-save-state ems-save-state--${saveState}`}>
+          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'All answers saved' : 'Answers save automatically'}
+        </span>
       </p>
 
       {unansweredIds.length > 0 && (
         <div className="ems-form__banner" role="alert">
           ⚠️ {unansweredIds.length} question
-          {unansweredIds.length > 1 ? 's are' : ' is'} unanswered.
-          You may still submit, but unanswered questions will count as blank.
+          {unansweredIds.length > 1 ? 's are' : ' is'} unanswered. You may still
+          submit, but unanswered questions score zero.
         </div>
       )}
 
@@ -218,45 +279,30 @@ function TakeExamPage() {
               <div className="ems-question-card__header">
                 <span className="ems-question-card__title">
                   Question {idx + 1}
-                  {q.points > 1 && (
-                    <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '0.4rem' }}>
-                      ({q.points} pts)
+                  {q.weight > 0 && (
+                    <span className="ems-question-card__weight">
+                      ({q.weight}% of the grade)
                     </span>
                   )}
                 </span>
-                {isUnanswered && (
-                  <span style={{ color: '#d97706', fontSize: '0.78rem', fontWeight: 600 }}>
-                    Unanswered
-                  </span>
-                )}
+                {isUnanswered && <span className="ems-question-card__flag">Unanswered</span>}
               </div>
 
-              <p style={{ margin: '0 0 0.85rem', lineHeight: 1.5 }}>{q.text}</p>
+              <p className="ems-question-card__text">{q.text}</p>
 
-              {/* ── Multiple-choice: radio buttons ─────────────────────── */}
               {q.type === 'multiple-choice' && (
-                <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <legend className="ems-form__label" style={{ marginBottom: '0.5rem' }}>
-                    Select one answer:
-                  </legend>
+                <fieldset className="ems-choice-set">
+                  <legend className="ems-form__label">Select one answer:</legend>
                   {(q.options || []).map((opt, oi) => (
-                    <label
-                      key={oi}
-                      style={{
-                        display:     'flex',
-                        alignItems:  'center',
-                        gap:         '0.5rem',
-                        marginBottom: '0.4rem',
-                        cursor:      'pointer',
-                        fontSize:    '0.9rem',
-                      }}
-                    >
+                    <label key={oi} className="ems-choice">
                       <input
                         type="radio"
                         name={`question-${q.id}`}
-                        value={opt}
-                        checked={answers[q.id] === opt}
-                        onChange={() => handleAnswer(q.id, opt)}
+                        /* The INDEX is stored, because that is what the server
+                           marks against — not the option's text. */
+                        value={String(oi)}
+                        checked={answers[q.id] === String(oi)}
+                        onChange={() => handleAnswer(q.id, String(oi))}
                       />
                       {opt}
                     </label>
@@ -264,7 +310,6 @@ function TakeExamPage() {
                 </fieldset>
               )}
 
-              {/* ── Open-text: textarea ────────────────────────────────── */}
               {q.type === 'open-text' && (
                 <div className="ems-form__group">
                   <label className="ems-form__label" htmlFor={`ot-${q.id}`}>
@@ -273,7 +318,7 @@ function TakeExamPage() {
                   <textarea
                     id={`ot-${q.id}`}
                     className="ems-form__textarea"
-                    rows={4}
+                    rows={5}
                     value={answers[q.id] || ''}
                     onChange={(e) => handleAnswer(q.id, e.target.value)}
                     placeholder="Write your answer here…"
@@ -284,17 +329,12 @@ function TakeExamPage() {
           );
         })}
 
-        {/* ── Actions ────────────────────────────────────────────────── */}
-        <div className="ems-form__actions" style={{ marginTop: '1.5rem' }}>
-          <button
-            type="submit"
-            className="ems-btn ems-btn--primary"
-            disabled={submitting}
-          >
-            {submitting ? 'Submitting…' : 'Submit Answers'}
+        <div className="ems-form__actions">
+          <button type="submit" className="ems-btn ems-btn--primary" disabled={submitting}>
+            {submitting ? 'Submitting…' : 'Submit answers'}
           </button>
           <Link to="/student/exams" className="ems-btn ems-btn--secondary">
-            Cancel
+            Leave (your answers are saved)
           </Link>
         </div>
       </form>

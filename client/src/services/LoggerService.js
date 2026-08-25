@@ -64,7 +64,6 @@ class LoggerService {
    */
   info(msg, ...args) {
     if (this._level <= LEVELS.info) {
-      // eslint-disable-next-line no-console
       console.info(`[EMS][INFO] ${msg}`, ...args);
     }
   }
@@ -79,7 +78,6 @@ class LoggerService {
    */
   warn(msg, ...args) {
     if (this._level <= LEVELS.warn) {
-      // eslint-disable-next-line no-console
       console.warn(`[EMS][WARN] ${msg}`, ...args);
     }
   }
@@ -94,7 +92,6 @@ class LoggerService {
    */
   error(msg, ...args) {
     if (this._level <= LEVELS.error) {
-      // eslint-disable-next-line no-console
       console.error(`[EMS][ERROR] ${msg}`, ...args);
     }
   }
@@ -109,7 +106,6 @@ class LoggerService {
    */
   debug(msg, ...args) {
     if (this._level <= LEVELS.debug) {
-      // eslint-disable-next-line no-console
       console.debug(`[EMS][DEBUG] ${msg}`, ...args);
     }
   }

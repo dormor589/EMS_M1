@@ -18,18 +18,6 @@ const DEMO_CREDS = {
   student: { email: 'student@ems.dev', password: 'password' },
 };
 
-const styles = {
-  page:   { fontFamily: 'sans-serif', maxWidth: 400, margin: '4rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: 8 },
-  title:  { marginBottom: '1.5rem', textAlign: 'center' },
-  field:  { marginBottom: '1rem' },
-  label:  { display: 'block', marginBottom: 4, fontWeight: 600 },
-  input:  { width: '100%', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: 4 },
-  btn:    { width: '100%', padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, fontSize: 15, cursor: 'pointer', marginTop: 8 },
-  error:  { color: '#dc2626', marginBottom: '1rem', fontSize: 14 },
-  demo:   { background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 4, padding: '0.75rem', fontSize: 13, marginBottom: '1.5rem' },
-  link:   { display: 'block', textAlign: 'center', marginTop: '1rem', color: '#2563eb' },
-};
-
 /**
  * @param {{ onSuccess: function(User): void }} props
  */
@@ -64,25 +52,29 @@ function LoginPage({ onSuccess }) {
   }
 
   return (
-    <div style={styles.page}>
-      <h2 style={styles.title}>Log In</h2>
+    <div className="ems-auth">
+      <div className="ems-auth__brand" aria-hidden="true">
+        <div className="ems-auth__seal" />
+      </div>
+      <div className="ems-auth-card">
+      <h2 className="ems-auth__title">Log In</h2>
 
       {/* Demo credentials hint — visible in dev to simplify testing */}
-      <div style={styles.demo}>
+      <div className="ems-auth__demo">
         <strong>Demo credentials</strong><br />
         Teacher: <code>{DEMO_CREDS.teacher.email}</code> / <code>{DEMO_CREDS.teacher.password}</code><br />
         Student: <code>{DEMO_CREDS.student.email}</code> / <code>{DEMO_CREDS.student.password}</code>
       </div>
 
-      {error && <div style={styles.error} role="alert">{error}</div>}
+      {error && <div className="ems-form__error" role="alert">{error}</div>}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="email">Email</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="email">Email</label>
           <input
             id="email"
             type="email"
-            style={styles.input}
+            className="ems-form__input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -90,12 +82,12 @@ function LoginPage({ onSuccess }) {
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="password">Password</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            style={styles.input}
+            className="ems-form__input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
@@ -103,12 +95,13 @@ function LoginPage({ onSuccess }) {
           />
         </div>
 
-        <button style={styles.btn} type="submit" disabled={loading}>
+        <button className="ems-btn ems-btn--primary ems-btn--block" type="submit" disabled={loading}>
           {loading ? 'Logging in…' : 'Log In'}
         </button>
       </form>
 
-      <Link style={styles.link} to="/register">No account? Register here</Link>
+      <Link className="ems-auth__alt" to="/register">No account? Register here</Link>
+      </div>
     </div>
   );
 }

@@ -5,12 +5,14 @@
  * showing a table of submitted student responses (student ID, submitted date,
  * current status, and grade if any).
  *
- * Data strategy (2 API calls total, no N+1):
- *   1. getExamsByTeacher(user.id)  — teacher's exam list
- *   2. mockApi.get('submissions')  — all submissions (filter in JS)
- * Both are fetched concurrently via Promise.all.
+ * Data strategy:
+ *   1. getExamsByTeacher(user.id)          — the teacher's exams
+ *   2. getSubmissionsByExam(exam.id) x N   — fetched concurrently
  *
- * Grading UI is M2 — this page is read-only in M1.
+ * There is no "all submissions" endpoint by design: the API scopes submissions
+ * to an exam and checks that the caller owns it, so a teacher cannot read
+ * another teacher's submissions. N is the teacher's own exam count, and the
+ * requests run in parallel.
  *
  * No business logic in JSX.
  *
@@ -19,7 +21,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth, examService, mockApi, notify } from '../../services/index.js';
+import { auth, examService, submissionService, notify } from '../../services/index.js';
 
 function SubmissionsPage() {
   const navigate = useNavigate();
@@ -35,23 +37,18 @@ function SubmissionsPage() {
       return;
     }
 
-    // Fetch teacher's exams + all submissions concurrently (2 calls, filter in JS).
-    Promise.all([
-      examService.getExamsByTeacher(user.id),
-      mockApi.get('submissions'),
-    ])
-      .then(([myExams, allSubmissions]) => {
-        const myExamIds = new Set(myExams.map((e) => e.id));
+    examService
+      .getExamsByTeacher(user.id)
+      .then(async (myExams) => {
+        const perExam = await Promise.all(
+          myExams.map((exam) => submissionService.getSubmissionsByExam(exam.id))
+        );
 
-        // Filter submissions to only those for this teacher's exams.
-        const mine = allSubmissions.filter((s) => myExamIds.has(s.examId));
-
-        // Group by exam.
-        const grouped = myExams.map((exam) => ({
+        const grouped = myExams.map((exam, i) => ({
           exam,
-          submissions: mine
-            .filter((s) => s.examId === exam.id)
-            .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)),
+          submissions: [...perExam[i]].sort(
+            (a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)
+          ),
         }));
 
         // Show exams with submissions first, then empty ones.
@@ -85,32 +82,16 @@ function SubmissionsPage() {
         </div>
       ) : (
         <>
-          <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+          <p className="ems-page__lead">
             {totalSubmissions} submission{totalSubmissions !== 1 ? 's' : ''} across{' '}
             {groups.length} exam{groups.length !== 1 ? 's' : ''}.
             Grading UI available in M2.
           </p>
 
           {groups.map(({ exam, submissions }) => (
-            <div key={exam.id} style={{ marginBottom: '2rem' }}>
-              <div
-                style={{
-                  display:        'flex',
-                  alignItems:     'center',
-                  gap:            '0.75rem',
-                  marginBottom:   '0.6rem',
-                  borderBottom:   '2px solid #e2e8f0',
-                  paddingBottom:  '0.4rem',
-                }}
-              >
-                <h2
-                  style={{
-                    margin:   0,
-                    fontSize: '1rem',
-                    fontWeight: 700,
-                    color:    '#1e3a5f',
-                  }}
-                >
+            <div key={exam.id} className="ems-subs-group">
+              <div className="ems-subs-group__header">
+                <h2 className="ems-subs-group__title">
                   {exam.title}
                 </h2>
                 <span
@@ -124,13 +105,13 @@ function SubmissionsPage() {
                 >
                   {exam.status}
                 </span>
-                <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                <span className="ems-subs-group__count">
                   {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {submissions.length === 0 ? (
-                <p className="ems-empty" style={{ paddingLeft: '0.5rem' }}>
+                <p className="ems-empty">
                   No submissions for this exam yet.
                 </p>
               ) : (
@@ -149,10 +130,10 @@ function SubmissionsPage() {
                     <tbody>
                       {submissions.map((s) => (
                         <tr key={s.id}>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                          <td className="ems-td-mono">
                             {s.studentId}
                           </td>
-                          <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                          <td className="ems-td-muted">
                             {new Date(s.submittedAt).toLocaleString()}
                           </td>
                           <td>
@@ -169,9 +150,9 @@ function SubmissionsPage() {
                           <td>
                             {s.grade !== null && s.grade !== undefined
                               ? <strong>{s.grade} / 100</strong>
-                              : <span style={{ color: '#94a3b8' }}>—</span>}
+                              : <span className="ems-faint">—</span>}
                           </td>
-                          <td style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                          <td className="ems-td-muted">
                             {(s.answers || []).length} answer
                             {(s.answers || []).length !== 1 ? 's' : ''}
                           </td>

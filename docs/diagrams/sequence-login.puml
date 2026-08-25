@@ -1,0 +1,75 @@
+@startuml SequenceLogin
+' Scenario 1 — Login
+' Shows how a credential becomes a session, and where the password stops.
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+
+actor Student
+participant "LoginPage" as Page
+participant "AuthService\n(client)" as CAuth
+participant "HttpApiService" as Http
+participant "StorageService" as Store
+box "Server" #F8FAFC
+  participant "authRoutes\n+ validate" as Route
+  participant "AuthService\n(server)" as SAuth
+  participant "UserRepository" as Repo
+end box
+database "PostgreSQL" as DB
+
+Student -> Page : enters email + password
+Page -> CAuth : login(email, password)
+CAuth -> Http : POST /api/auth/login\n{email, password}
+Http -> Route : HTTP request
+
+Route -> Route : zod validates the shape
+note right of Route
+  A malformed request is rejected here
+  with a field-level 400 and never
+  reaches the service.
+end note
+
+Route -> SAuth : login(email, password)
+SAuth -> Repo : findByEmail(email)
+Repo -> DB : SELECT * FROM users WHERE email = $1
+DB --> Repo : row (or none)
+Repo --> SAuth : User | null
+
+alt credentials are valid
+  SAuth -> SAuth : bcrypt.compare(password, hash)
+  note right of SAuth
+    The password is compared here and
+    then discarded. It is never stored,
+    never logged, never returned.
+  end note
+  SAuth -> SAuth : jwt.sign({sub, role}, secret, {expiresIn: '8h'})
+  SAuth --> Route : { user, token }
+  Route --> Http : 200 { user, token }
+
+  Http -> Store : set(ems_auth_token, token)
+  Http -> Store : set(ems_current_user, user)
+  note over Store
+    Only the token and the PUBLIC user
+    record. No password reaches the
+    browser at any point.
+  end note
+
+  CAuth --> Page : User
+  Page -> Student : redirect to the role's dashboard
+
+else email unknown OR password wrong
+  SAuth -> SAuth : compare against a dummy hash
+  note right of SAuth
+    Both failures take comparable time and
+    return an identical message, so the
+    response cannot be used to discover
+    which addresses are registered.
+  end note
+  SAuth --> Route : throw ApiError(401)
+  Route --> Http : 401 { error: "Invalid email or password" }
+  Http --> Page : Error
+  Page -> Student : shows the message
+end
+
+@enduml

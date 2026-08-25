@@ -10,8 +10,19 @@
 
 // ── Module-level constants ────────────────────────────────────────────────────
 
-/** API mode for Milestone 1 — all calls are mocked locally. */
-const API_MODE = 'mock';
+/**
+ * API mode.
+ *
+ * 'live' talks to the Express API; 'mock' uses the in-browser localStorage
+ * implementation kept from Milestone 1. Set VITE_API_MODE=mock to fall back —
+ * useful for demoing the UI with no server running, and it keeps the service
+ * tests able to run without a database.
+ */
+const API_MODE = import.meta.env?.VITE_API_MODE || 'live';
+
+/** Base URL of the Express API. Overridable per environment. */
+const API_BASE_URL =
+  import.meta.env?.VITE_API_URL || 'http://localhost:5050/api';
 
 /** localStorage key names. Prefixed with 'ems_' for scoped clear(). */
 const STORAGE_KEYS = Object.freeze({
@@ -19,6 +30,8 @@ const STORAGE_KEYS = Object.freeze({
   exams: 'ems_exams',
   submissions: 'ems_submissions',
   currentUser: 'ems_current_user',
+  /** Signed JWT from the API. Replaces M1's plaintext password in storage. */
+  authToken: 'ems_auth_token',
 });
 
 /** Default status for a newly-created exam. Source: spec §5.1 state machine. */
@@ -37,14 +50,30 @@ const QUESTION_TYPES = Object.freeze(['multiple-choice', 'open-text']);
 
 class ConfigService {
   /**
-   * Returns the current API mode.
+   * Returns the current API mode: 'live' or 'mock'.
    *
-   * In M1 this is always 'mock'. M2+ will introduce 'live'.
-   *
-   * @returns {string} 'mock'
+   * @returns {string}
    */
   getApiMode() {
     return API_MODE;
+  }
+
+  /**
+   * True when the app should talk to the real Express API.
+   *
+   * @returns {boolean}
+   */
+  isLive() {
+    return API_MODE === 'live';
+  }
+
+  /**
+   * Base URL of the API, without a trailing slash.
+   *
+   * @returns {string}
+   */
+  getApiBaseUrl() {
+    return API_BASE_URL.replace(/\/$/, '');
   }
 
   /**

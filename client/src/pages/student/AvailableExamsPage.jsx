@@ -81,7 +81,7 @@ function AvailableExamsPage() {
               {exams.map((exam) => (
                 <tr key={exam.id}>
                   <td>{exam.title}</td>
-                  <td style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                  <td className="ems-td-muted">
                     {exam.description
                       ? exam.description.slice(0, 60) + (exam.description.length > 60 ? '…' : '')
                       : '—'}

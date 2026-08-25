@@ -12,19 +12,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, config, notify } from '../../services/index.js';
 
-const styles = {
-  page:    { fontFamily: 'sans-serif', maxWidth: 420, margin: '4rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: 8 },
-  title:   { marginBottom: '1.5rem', textAlign: 'center' },
-  field:   { marginBottom: '1rem' },
-  label:   { display: 'block', marginBottom: 4, fontWeight: 600 },
-  input:   { width: '100%', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: 4 },
-  select:  { width: '100%', padding: '8px 10px', fontSize: 14, boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: 4, background: '#fff' },
-  btn:     { width: '100%', padding: '10px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, fontSize: 15, cursor: 'pointer', marginTop: 8 },
-  error:   { color: '#dc2626', marginBottom: '1rem', fontSize: 14 },
-  hint:    { color: '#6b7280', fontSize: 12, marginTop: 4 },
-  link:    { display: 'block', textAlign: 'center', marginTop: '1rem', color: '#2563eb' },
-};
-
 /**
  * @param {{ onSuccess: function(User): void }} props
  */
@@ -64,18 +51,22 @@ function RegisterPage({ onSuccess }) {
   }
 
   return (
-    <div style={styles.page}>
-      <h2 style={styles.title}>Create Account</h2>
+    <div className="ems-auth">
+      <div className="ems-auth__brand" aria-hidden="true">
+        <div className="ems-auth__seal" />
+      </div>
+      <div className="ems-auth-card">
+      <h2 className="ems-auth__title">Create Account</h2>
 
-      {error && <div style={styles.error} role="alert">{error}</div>}
+      {error && <div className="ems-form__error" role="alert">{error}</div>}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="name">Full Name</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="name">Full Name</label>
           <input
             id="name"
             type="text"
-            style={styles.input}
+            className="ems-form__input"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
@@ -83,12 +74,12 @@ function RegisterPage({ onSuccess }) {
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="email">Email</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="email">Email</label>
           <input
             id="email"
             type="email"
-            style={styles.input}
+            className="ems-form__input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
@@ -96,25 +87,25 @@ function RegisterPage({ onSuccess }) {
           />
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="password">Password</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            style={styles.input}
+            className="ems-form__input"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             disabled={loading}
           />
-          <span style={styles.hint}>Minimum 4 characters (M1 mock auth)</span>
+          <span className="ems-form__hint">Minimum 4 characters (M1 mock auth)</span>
         </div>
 
-        <div style={styles.field}>
-          <label style={styles.label} htmlFor="role">Role</label>
+        <div className="ems-form__group">
+          <label className="ems-form__label" htmlFor="role">Role</label>
           <select
             id="role"
-            style={styles.select}
+            className="ems-form__select"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             disabled={loading}
@@ -128,12 +119,13 @@ function RegisterPage({ onSuccess }) {
           </select>
         </div>
 
-        <button style={styles.btn} type="submit" disabled={loading}>
+        <button className="ems-btn ems-btn--primary ems-btn--block" type="submit" disabled={loading}>
           {loading ? 'Creating account…' : 'Register'}
         </button>
       </form>
 
-      <Link style={styles.link} to="/login">Already have an account? Log in</Link>
+      <Link className="ems-auth__alt" to="/login">Already have an account? Log in</Link>
+      </div>
     </div>
   );
 }

@@ -1,153 +1,118 @@
-Component Hierarchy — EMS_M1 (Milestone 1)
-Reflects actual code as built in D001-D007.
-Source: the milestone brief §15.1
-==========================================
+Component Hierarchy — EMS
+Reflects the delivered client. Milestone 2 additions are marked [M2].
+=====================================================================
 
-App                                      (client/src/app/App.jsx)
-|  Seeds mock DB on mount (MockApiService.seedIfEmpty).
-|  Renders a loading screen until seed completes.
-|  Wraps the entire tree in BrowserRouter.
+App                                       client/src/app/App.jsx
+|  Checks the API is reachable before rendering anything.        [M2]
+|  Re-validates the stored session against the server — a token  [M2]
+|  can expire while the tab is closed.
+|  Shows an actionable message, with the command to start the
+|  server, if the API is down.
 |
-+-- AppRoutes                            (client/src/app/routes.jsx)
-|   |  Full route table nested under MainLayout.
-|   |  LandingRedirect inline component dispatches "/" by role.
-|   |
-|   +-- MainLayout                       (client/src/components/layout/MainLayout.jsx)
-|   |   |  Persistent shell rendered for every route.
-|   |   |
-|   |   +-- NavigationMenu              (client/src/components/layout/NavigationMenu.jsx)
-|   |   |       Role-aware nav bar. Re-reads auth.getCurrentUser() on
-|   |   |       every location change (useEffect on pathname).
-|   |   |       Three visual states:
-|   |   |         Unauthenticated -- Login, Register links
-|   |   |         Teacher         -- Dashboard, My Exams, New Exam,
-|   |   |                           Submissions, Logout
-|   |   |         Student         -- Dashboard, Available Exams,
-|   |   |                           Grades, Logout
-|   |   |
-|   |   +-- <main> / Outlet             Page slot; matched child route renders here.
-|   |
-|   +-- ProtectedRoute (shared)         (client/src/components/shared/ProtectedRoute.jsx)
-|   |       Route guard wrapping all teacher/student page routes.
-|   |       No user       -> Navigate to /login
-|   |       Wrong role    -> Navigate to own home (/teacher or /student)
-|   |       Correct role  -> renders children
-|   |
-|   +-- LandingRedirect (inline)        Inside routes.jsx, not a separate file.
-|           Handles path "/". Dispatches:
-|             No user  -> /login
-|             Teacher  -> /teacher
-|             Student  -> /student
+|  (Milestone 1 seeded a mock database here. That is gone: the
+|   data lives in PostgreSQL and is seeded with `npm run db:seed`.)
 |
-+-- Auth Pages
-|   |
-|   +-- LoginPage                       (client/src/pages/auth/LoginPage.jsx)
-|   |       Controlled form: email + password.
-|   |       Calls auth.login(). Shows demo credentials hint.
-|   |       On success: navigates to "/" (LandingRedirect handles role dispatch).
-|   |
-|   +-- RegisterPage                    (client/src/pages/auth/RegisterPage.jsx)
-|           Controlled form: name, email, password, role select.
-|           Roles populated from config.getRoles() (no magic strings in JSX).
-|           On success: navigates to "/".
-|
-+-- Teacher Pages  (all behind ProtectedRoute role="teacher")
-|   |
-|   +-- TeacherDashboard                (client/src/pages/teacher/TeacherDashboard.jsx)
-|   |       Counter cards: Total, Draft, Published, Closed, Submissions (stub 0).
-|   |       Quick-links: Create New Exam, View My Exams, Submissions.
-|   |       Data: examService.getExamsByTeacher(user.id).
-|   |
-|   +-- TeacherExamsPage                (client/src/pages/teacher/TeacherExamsPage.jsx)
-|   |       Table: title, status badge, duration, question count, actions.
-|   |       Per-row actions:
-|   |         Edit    -- always shown, links to /teacher/exams/:id/edit
-|   |         Publish -- shown if status === Draft
-|   |         Close   -- shown if status === Published
-|   |         (no actions for Closed)
-|   |       Calls examService.publishExam / closeExam; re-fetches list on success.
-|   |
-|   +-- CreateExamPage                  (client/src/pages/teacher/CreateExamPage.jsx)
-|   |   |   Form: title, description, durationMinutes, question list.
-|   |   |   Validates: title non-empty, at least 1 question.
-|   |   |   On submit: examService.createExam -> navigate /teacher/exams.
-|   |   |
-|   |   +-- QuestionEditor (local)      Unexported sub-component inside CreateExamPage.
-|   |           Per-question form: type select, text, options (MC), correctAnswer, points.
-|   |           MC: dynamic option list with Add/Remove Option buttons.
-|   |
-|   +-- EditExamPage                    (client/src/pages/teacher/EditExamPage.jsx)
-|   |   |   Same form as Create, pre-filled via examService.getExamById(id).
-|   |   |   Banner shown for Published/Closed exams.
-|   |   |   Status field stripped by examService.updateExam() (cannot bypass machine).
-|   |   |
-|   |   +-- QuestionEditor (local)      Same shape as in CreateExamPage.
-|   |           Existing questions hydrated via toEditorQuestion() helper.
-|   |
-|   +-- SubmissionsPage                 (client/src/pages/teacher/SubmissionsPage.jsx)
-|           Grouped by exam. Two concurrent calls:
-|             examService.getExamsByTeacher + mockApi.get('submissions').
-|           Filters and groups in JS. Sorted by submission count (exams with
-|           more submissions appear first).
-|           Read-only in M1; grading UI is Milestone 2.
-|
-+-- Student Pages  (all behind ProtectedRoute role="student")
-|   |
-|   +-- StudentDashboard                (client/src/pages/student/StudentDashboard.jsx)
-|   |       Counter cards: Available, Submitted, Graded.
-|   |       Two concurrent calls: getPublishedExams + getSubmissionsByStudent.
-|   |       Derives counts in JS using a Set of submitted exam IDs.
-|   |       Quick-links: View Available Exams, View My Grades.
-|   |
-|   +-- AvailableExamsPage              (client/src/pages/student/AvailableExamsPage.jsx)
-|   |       CRITICAL: uses getPublishedExams() only -- never shows Draft or Closed.
-|   |       Two concurrent calls: getPublishedExams + getSubmissionsByStudent.
-|   |       Hides exams the student has already submitted.
-|   |       Table: title, description preview, duration, question count, Start button.
-|   |       Start button links to /student/exams/:id.
-|   |
-|   +-- TakeExamPage                    (client/src/pages/student/TakeExamPage.jsx)
-|   |       Guards on load:
-|   |         (1) Exam must exist.
-|   |         (2) Exam must be Published (rejects Draft and Closed).
-|   |         (3) Student must not have already submitted (redirect /student/grades).
-|   |       Question rendering:
-|   |         multiple-choice -> <input type="radio"> per option inside <fieldset>
-|   |         open-text       -> <textarea>
-|   |       Draft auto-save: answers written to StorageService on every change,
-|   |         key ems_draft_<examId>_<studentId>. Cleared on submit.
-|   |       Unanswered-question warning shown inline; submission not blocked.
-|   |       On submit: submissionService.submitExam -> clear draft -> /student/grades.
-|   |
-|   +-- GradesPage                      (client/src/pages/student/GradesPage.jsx)
-|           Two concurrent calls: getSubmissionsByStudent + getAllExams.
-|           Joins by examId in JS to resolve exam title (no N+1).
-|           Table: Exam, Submitted, Status badge, Grade, Feedback.
-|           Sorted most-recent-first.
-|
-+-- Misc
++-- BrowserRouter
     |
-    +-- NotFoundPage                    (client/src/pages/NotFoundPage.jsx)
-            Rendered for path="*" (any unmatched URL).
+    +-- AppRoutes                         client/src/app/routes.jsx
+        |  Full route table, every page nested under MainLayout.
+        |  LandingRedirect dispatches "/" by role.
+        |
+        +-- MainLayout                    components/layout/MainLayout.jsx
+            |  Persistent shell: nav bar plus <Outlet>.
+            |
+            +-- NavigationMenu            components/layout/NavigationMenu.jsx
+            |     Role-aware links. Reads auth during render rather   [M2]
+            |     than mirroring it into state.
+            |
+            +-- <Outlet>
+                |
+                +-- PUBLIC
+                |   +-- LoginPage             pages/auth/LoginPage.jsx
+                |   +-- RegisterPage          pages/auth/RegisterPage.jsx
+                |   +-- NotFoundPage          pages/NotFoundPage.jsx
+                |
+                +-- TEACHER  (wrapped in ProtectedRoute role="teacher")
+                |   |
+                |   +-- TeacherDashboard      pages/teacher/TeacherDashboard.jsx
+                |   |     Counters: exams by status, submissions awaiting grading.
+                |   |
+                |   +-- TeacherExamsPage      pages/teacher/TeacherExamsPage.jsx
+                |   |     List with status. Publish / Close actions.
+                |   |
+                |   +-- CreateExamPage        pages/teacher/CreateExamPage.jsx
+                |   |   +-- QuestionEditor    (local component)
+                |   |         Type, text, options, correct answer (a dropdown  [M2]
+                |   |         over the options, not free text), weight.        [M2]
+                |   |
+                |   +-- EditExamPage          pages/teacher/EditExamPage.jsx
+                |   |   +-- QuestionEditor    Same editor, pre-filled.
+                |   |         Sends question ids back, so the server updates    [M2]
+                |   |         in place and existing answers survive.
+                |   |
+                |   +-- GenerateExamPage      pages/teacher/GenerateExamPage.jsx   [M2]
+                |   |     Describe an exam -> AI drafts it -> review -> save.
+                |   |     Badges which provider answered. Nothing is saved
+                |   |     until the teacher confirms.
+                |   |
+                |   +-- SubmissionsPage       pages/teacher/SubmissionsPage.jsx
+                |   |     Grouped by exam, with student names and status.
+                |   |
+                |   +-- SubmissionDetailPage  pages/teacher/SubmissionDetailPage.jsx
+                |   |     Marking screen.
+                |   |     - multiple choice shown read-only (marked from the key)
+                |   |     - open text: editable score + comment              [M2]
+                |   |     - "Run AI grading" button                          [M2]
+                |   |     - "AI proposed N/100" shown beside the teacher's   [M2]
+                |   |       value, so an override is visible
+                |   |     - live total, same formula as the server           [M2]
+                |   |     - Save draft (private) / Publish (to the student)  [M2]
+                |   |
+                |   +-- AnalyticsPage         pages/teacher/AnalyticsPage.jsx      [M2]
+                |         Stat tiles, per-exam table, grade distribution
+                |         histogram, per-question difficulty, optional
+                |         AI-written summary.
+                |
+                +-- STUDENT  (wrapped in ProtectedRoute role="student")
+                    |
+                    +-- StudentDashboard      pages/student/StudentDashboard.jsx
+                    |     Counters: available, submitted, graded.
+                    |
+                    +-- AvailableExamsPage    pages/student/AvailableExamsPage.jsx
+                    |     Published exams not yet submitted.
+                    |
+                    +-- TakeExamPage          pages/student/TakeExamPage.jsx
+                    |     - starts or RESUMES an attempt; a refresh cannot   [M2]
+                    |       reset the clock
+                    |     - live countdown against the server's deadline     [M2]
+                    |     - autosaves to the SERVER, debounced 1.2s          [M2]
+                    |       (Milestone 1 saved drafts to localStorage)
+                    |     - submits automatically at zero                    [M2]
+                    |     - multiple-choice answers stored as the option
+                    |       INDEX, which is what the server marks against    [M2]
+                    |
+                    +-- GradesPage            pages/student/GradesPage.jsx
+                          Published grades and per-question feedback only.
+                          An unpublished draft is invisible — the status is
+                          even collapsed, so a student cannot tell one exists.
 
+SHARED
+======
+ProtectedRoute            components/shared/ProtectedRoute.jsx
+  Redirects an unauthenticated visitor to /login, and a user with the
+  wrong role to their own dashboard.
+  A convenience, NOT a security boundary — the server refuses the
+  request regardless.
 
-NOTES ON DIVERGENCE FROM §15.1 TEMPLATE
------------------------------------------
-1. The template shows "PageContainer (<Outlet />)" as a named child of
-   MainLayout. In the actual code this is the unnamed <main> element
-   inside MainLayout that wraps <Outlet />. There is no PageContainer
-   component or file.
+SERVICES (not components; injected via services/index.js)
+=========================================================
+config, logger, storage, notify
+api                HttpApiService — the only client code that leaves    [M2]
+                   the browser. Holds the JWT.
+auth               login, register, role checks (synchronous reads)
+examService        exam CRUD, publish, close
+submissionService  attempts, autosave, submission, grading
+aiService          generation, AI grading                               [M2]
+analyticsService   statistics                                           [M2]
 
-2. LandingRedirect is not a separate file or exported component. It is an
-   inline function component defined inside routes.jsx and used as the
-   element for the "/" route.
-
-3. ProtectedRoute is not listed in the template hierarchy but is a real
-   shared component (components/shared/ProtectedRoute.jsx) that wraps every
-   teacher and student page route.
-
-4. QuestionEditor is not a standalone file. It is a local unexported
-   sub-component defined inside CreateExamPage.jsx and duplicated inside
-   EditExamPage.jsx (intentional M1 simplicity; extraction deferred to M2).
-
-5. NotFoundPage is an additional page not shown in the §15.1 template.
+Pages never call fetch. Models never import services.

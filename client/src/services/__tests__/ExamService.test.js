@@ -1,385 +1,173 @@
 /**
- * ExamService unit tests.
+ * ExamService tests — Milestone 2.
  *
- * Uses real StorageService (jsdom localStorage, cleared between tests) and
- * real ConfigService / LoggerService singletons, with a fresh MockApiService
- * and ExamService per describe-group to avoid state bleed.
- *
- * Covers:
- *   - Constructor validation
- *   - createExam: happy path + validation rejections
- *   - getAllExams / getPublishedExams / getExamsByTeacher
- *   - getExamById: found + not found
- *   - publishExam: Draft → Published; invalid transitions reject
- *   - closeExam:  Published → Closed; invalid transitions reject
- *   - updateExam: partial update; status field is stripped
- *   - deleteExam: removes the record
- *
- * Source: the milestone brief §8 — ExamService
- * Source: the milestone brief §5.1 — exam status state machine
+ * The exam state machine now lives on the server, so these tests assert the
+ * HTTP contract this class is responsible for: correct endpoints, and correct
+ * translation of the form's shapes into what the API validates.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import MockApiService from '../MockApiService.js';
-import ExamService    from '../ExamService.js';
-import storage from '../StorageService.js';
-import config  from '../ConfigService.js';
-import logger  from '../LoggerService.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import ExamService from '../ExamService.js';
+import config from '../ConfigService.js';
+import { makeFakeApi, apiError } from './helpers/fakeApi.js';
 
-// Silence logger console output during tests.
-beforeEach(() => {
-  vi.spyOn(console, 'info').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  localStorage.clear();
-});
+const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+const EXAMS = [
+  { id: 'e1', title: 'Published One', status: 'Published', createdBy: 't1' },
+  { id: 'e2', title: 'Draft One',     status: 'Draft',     createdBy: 't1' },
+  { id: 'e3', title: 'Someone Else',  status: 'Published', createdBy: 't2' },
+];
 
-/** Create a fresh, wired ExamService backed by a fresh MockApiService. */
-function mkService() {
-  const api = new MockApiService(storage, config, logger);
-  return new ExamService(api, config, logger);
-}
+describe('ExamService', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-/** Minimal valid createExam payload. */
-const BASE_EXAM = {
-  title:           'Test Exam',
-  description:     'A description',
-  durationMinutes: 30,
-  createdBy:       'teacher-uuid-001',
-  questions:       [],
-};
+  describe('reads', () => {
+    it('gets the list from /exams', async () => {
+      const api = makeFakeApi({ 'GET /exams': { exams: EXAMS } });
+      const exams = await new ExamService(api, config, logger).getAllExams();
 
-// ── Constructor validation ────────────────────────────────────────────────────
-
-describe('ExamService constructor', () => {
-  it('throws when mockApi is missing', () => {
-    expect(() => new ExamService(null, config, logger)).toThrow(/mockApi/);
-  });
-
-  it('throws when config is missing', () => {
-    const api = new MockApiService(storage, config, logger);
-    expect(() => new ExamService(api, null, logger)).toThrow(/config/);
-  });
-
-  it('throws when logger is missing', () => {
-    const api = new MockApiService(storage, config, logger);
-    expect(() => new ExamService(api, config, null)).toThrow(/logger/);
-  });
-});
-
-// ── createExam ────────────────────────────────────────────────────────────────
-
-describe('ExamService.createExam', () => {
-  it('persists an exam with status Draft', async () => {
-    const svc   = mkService();
-    const exam  = await svc.createExam(BASE_EXAM);
-
-    expect(exam.status).toBe('Draft');
-    expect(exam.title).toBe('Test Exam');
-    expect(exam.createdBy).toBe('teacher-uuid-001');
-  });
-
-  it('assigns a UUID id and createdAt', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-
-    expect(exam.id).toBeTruthy();
-    expect(typeof exam.id).toBe('string');
-    expect(exam.createdAt).toBeTruthy();
-  });
-
-  it('assigns id and examId to each question', async () => {
-    const svc = mkService();
-    const exam = await svc.createExam({
-      ...BASE_EXAM,
-      questions: [
-        { type: 'open-text', text: 'Explain X', options: [], correctAnswer: '', points: 2 },
-      ],
+      expect(api.calls[0].path).toBe('/exams');
+      expect(exams).toHaveLength(3);
     });
 
-    expect(exam.questions).toHaveLength(1);
-    expect(exam.questions[0].id).toBeTruthy();
-    expect(exam.questions[0].examId).toBe(exam.id);
-  });
+    it('filters published exams', async () => {
+      const api = makeFakeApi({ 'GET /exams': { exams: EXAMS } });
+      const published = await new ExamService(api, config, logger).getPublishedExams();
 
-  it('rejects when title is empty string', async () => {
-    const svc = mkService();
-    await expect(svc.createExam({ ...BASE_EXAM, title: '' })).rejects.toThrow(/title/i);
-  });
-
-  it('rejects when title is whitespace only', async () => {
-    const svc = mkService();
-    await expect(svc.createExam({ ...BASE_EXAM, title: '   ' })).rejects.toThrow(/title/i);
-  });
-
-  it('rejects when createdBy is missing', async () => {
-    const svc = mkService();
-    await expect(svc.createExam({ ...BASE_EXAM, createdBy: '' })).rejects.toThrow(/createdBy/i);
-  });
-
-  it('rejects when durationMinutes is 0', async () => {
-    const svc = mkService();
-    await expect(
-      svc.createExam({ ...BASE_EXAM, durationMinutes: 0 })
-    ).rejects.toThrow(/durationMinutes/i);
-  });
-
-  it('rejects when durationMinutes is negative', async () => {
-    const svc = mkService();
-    await expect(
-      svc.createExam({ ...BASE_EXAM, durationMinutes: -5 })
-    ).rejects.toThrow(/durationMinutes/i);
-  });
-
-  it('creates with an empty questions array (teacher adds questions later)', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam({ ...BASE_EXAM, questions: undefined });
-    expect(exam.questions).toEqual([]);
-  });
-});
-
-// ── getAllExams ───────────────────────────────────────────────────────────────
-
-describe('ExamService.getAllExams', () => {
-  it('returns an empty array when no exams exist', async () => {
-    const svc   = mkService();
-    const exams = await svc.getAllExams();
-    expect(exams).toEqual([]);
-  });
-
-  it('returns all exams regardless of status', async () => {
-    const svc = mkService();
-    await svc.createExam({ ...BASE_EXAM, title: 'E1' });
-    const e2 = await svc.createExam({ ...BASE_EXAM, title: 'E2' });
-    await svc.publishExam(e2.id);
-
-    const exams = await svc.getAllExams();
-    expect(exams).toHaveLength(2);
-  });
-});
-
-// ── getPublishedExams ─────────────────────────────────────────────────────────
-
-describe('ExamService.getPublishedExams', () => {
-  it('returns only Published exams', async () => {
-    const svc   = mkService();
-    const draft = await svc.createExam({ ...BASE_EXAM, title: 'Draft Exam' });
-    const pub   = await svc.createExam({ ...BASE_EXAM, title: 'Published Exam' });
-    await svc.publishExam(pub.id);
-
-    const results = await svc.getPublishedExams();
-    expect(results).toHaveLength(1);
-    expect(results[0].id).toBe(pub.id);
-    expect(results.some((e) => e.id === draft.id)).toBe(false);
-  });
-
-  it('returns empty when no exams are published', async () => {
-    const svc = mkService();
-    await svc.createExam(BASE_EXAM);
-    const results = await svc.getPublishedExams();
-    expect(results).toHaveLength(0);
-  });
-});
-
-// ── getExamsByTeacher ─────────────────────────────────────────────────────────
-
-describe('ExamService.getExamsByTeacher', () => {
-  it('returns only exams created by the specified teacher', async () => {
-    const svc = mkService();
-    await svc.createExam({ ...BASE_EXAM, createdBy: 'teacher-A' });
-    await svc.createExam({ ...BASE_EXAM, createdBy: 'teacher-B' });
-
-    const results = await svc.getExamsByTeacher('teacher-A');
-    expect(results).toHaveLength(1);
-    expect(results[0].createdBy).toBe('teacher-A');
-  });
-
-  it('returns empty when teacher has no exams', async () => {
-    const svc = mkService();
-    await svc.createExam({ ...BASE_EXAM, createdBy: 'teacher-B' });
-    const results = await svc.getExamsByTeacher('teacher-A');
-    expect(results).toHaveLength(0);
-  });
-
-  it('throws when teacherId is missing', async () => {
-    const svc = mkService();
-    await expect(svc.getExamsByTeacher('')).rejects.toThrow(/teacherId/i);
-  });
-});
-
-// ── getExamById ───────────────────────────────────────────────────────────────
-
-describe('ExamService.getExamById', () => {
-  it('returns the exam when found', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    const found = await svc.getExamById(exam.id);
-    expect(found).not.toBeNull();
-    expect(found.id).toBe(exam.id);
-  });
-
-  it('returns null when exam does not exist', async () => {
-    const svc  = mkService();
-    const found = await svc.getExamById('non-existent-id');
-    expect(found).toBeNull();
-  });
-
-  it('throws when id is missing', async () => {
-    const svc = mkService();
-    await expect(svc.getExamById('')).rejects.toThrow(/id/i);
-  });
-});
-
-// ── publishExam ───────────────────────────────────────────────────────────────
-
-describe('ExamService.publishExam', () => {
-  it('transitions a Draft exam to Published', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    expect(exam.status).toBe('Draft');
-
-    const published = await svc.publishExam(exam.id);
-    expect(published.status).toBe('Published');
-  });
-
-  it('persists Published status (getExamById returns Published)', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-
-    const reloaded = await svc.getExamById(exam.id);
-    expect(reloaded.status).toBe('Published');
-  });
-
-  it('throws Invalid status transition when exam is already Published', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-
-    await expect(svc.publishExam(exam.id)).rejects.toThrow(
-      /Invalid status transition: Published → Published/
-    );
-  });
-
-  it('throws Invalid status transition when exam is Closed', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-    await svc.closeExam(exam.id);
-
-    await expect(svc.publishExam(exam.id)).rejects.toThrow(
-      /Invalid status transition: Closed → Published/
-    );
-  });
-
-  it('throws when id is missing', async () => {
-    const svc = mkService();
-    await expect(svc.publishExam('')).rejects.toThrow(/id/i);
-  });
-});
-
-// ── closeExam ─────────────────────────────────────────────────────────────────
-
-describe('ExamService.closeExam', () => {
-  it('transitions a Published exam to Closed', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-
-    const closed = await svc.closeExam(exam.id);
-    expect(closed.status).toBe('Closed');
-  });
-
-  it('persists Closed status', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-    await svc.closeExam(exam.id);
-
-    const reloaded = await svc.getExamById(exam.id);
-    expect(reloaded.status).toBe('Closed');
-  });
-
-  it('throws Invalid status transition Draft → Closed', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-
-    await expect(svc.closeExam(exam.id)).rejects.toThrow(
-      /Invalid status transition: Draft → Closed/
-    );
-  });
-
-  it('throws Invalid status transition Closed → Closed', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.publishExam(exam.id);
-    await svc.closeExam(exam.id);
-
-    await expect(svc.closeExam(exam.id)).rejects.toThrow(
-      /Invalid status transition: Closed → Closed/
-    );
-  });
-
-  it('throws when id is missing', async () => {
-    const svc = mkService();
-    await expect(svc.closeExam('')).rejects.toThrow(/id/i);
-  });
-});
-
-// ── updateExam ────────────────────────────────────────────────────────────────
-
-describe('ExamService.updateExam', () => {
-  it('updates title and description', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    const updated = await svc.updateExam(exam.id, {
-      title:       'New Title',
-      description: 'New Description',
+      expect(published.map((e) => e.id)).toEqual(['e1', 'e3']);
     });
-    expect(updated.title).toBe('New Title');
-    expect(updated.description).toBe('New Description');
+
+    it('filters by teacher', async () => {
+      const api = makeFakeApi({ 'GET /exams': { exams: EXAMS } });
+      const mine = await new ExamService(api, config, logger).getExamsByTeacher('t1');
+
+      expect(mine.map((e) => e.id)).toEqual(['e1', 'e2']);
+    });
+
+    it('requires a teacher id', async () => {
+      const api = makeFakeApi({});
+      await expect(new ExamService(api, config, logger).getExamsByTeacher())
+        .rejects.toThrow(/teacherId/);
+    });
+
+    it('returns null for a missing exam rather than throwing', async () => {
+      // The pages rely on this: they branch on `if (!exam)`.
+      const api = makeFakeApi({ 'GET /exams/gone': apiError(404, 'Exam not found') });
+      expect(await new ExamService(api, config, logger).getExamById('gone')).toBeNull();
+    });
+
+    it('still propagates errors that are not 404', async () => {
+      const api = makeFakeApi({ 'GET /exams/e1': apiError(403, 'Forbidden') });
+      await expect(new ExamService(api, config, logger).getExamById('e1'))
+        .rejects.toThrow('Forbidden');
+    });
   });
 
-  it('strips the status field from partial (status unchanged)', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
+  describe('create', () => {
+    it('coerces the form’s strings into the shapes the API validates', async () => {
+      const api = makeFakeApi({ 'POST /exams': { exam: { id: 'new' } } });
 
-    // Attempt to change status via updateExam — must be ignored.
-    const updated = await svc.updateExam(exam.id, { status: 'Published' });
-    expect(updated.status).toBe('Draft');
+      await new ExamService(api, config, logger).createExam({
+        title: 'Maths',
+        durationMinutes: '45',          // a form gives strings
+        questions: [{
+          type: 'multiple-choice',
+          text: '2+2?',
+          options: ['3', '4', ''],      // trailing blank left by the editor
+          correctAnswer: '1',
+          points: 20,                   // M1 called weight "points"
+        }],
+      });
+
+      const body = api.calls[0].body;
+      expect(body.durationMinutes).toBe(45);
+      expect(body.questions[0].correctAnswer).toBe(1);
+      expect(body.questions[0].weight).toBe(20);
+      // Blank options are dropped, or the API would reject them.
+      expect(body.questions[0].options).toEqual(['3', '4']);
+    });
+
+    it('sends no correctAnswer for an open-text question', async () => {
+      const api = makeFakeApi({ 'POST /exams': { exam: { id: 'new' } } });
+
+      await new ExamService(api, config, logger).createExam({
+        title: 'Essay', durationMinutes: 30,
+        questions: [{ type: 'open-text', text: 'Discuss.', weight: 100 }],
+      });
+
+      expect(api.calls[0].body.questions[0].correctAnswer).toBeNull();
+      expect(api.calls[0].body.questions[0].options).toEqual([]);
+    });
   });
 
-  it('preserves createdAt from the original exam', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    const updated = await svc.updateExam(exam.id, { title: 'Changed' });
-    expect(updated.createdAt).toBe(exam.createdAt);
+  describe('update', () => {
+    it('strips fields the API will not accept', async () => {
+      const api = makeFakeApi({ 'PUT /exams/e1': { exam: { id: 'e1' }, regradeRequired: 0 } });
+
+      await new ExamService(api, config, logger).updateExam('e1', {
+        title: 'New title',
+        status: 'Published',   // publish/close own the lifecycle, not update
+        id: 'e1',
+        createdAt: 'whenever',
+      });
+
+      const body = api.calls[0].body;
+      expect(body.title).toBe('New title');
+      expect(body).not.toHaveProperty('status');
+      expect(body).not.toHaveProperty('id');
+      expect(body).not.toHaveProperty('createdAt');
+    });
+
+    it('keeps a question id, so the server updates rather than re-creates', async () => {
+      const api = makeFakeApi({ 'PUT /exams/e1': { exam: { id: 'e1' }, regradeRequired: 0 } });
+
+      await new ExamService(api, config, logger).updateExam('e1', {
+        questions: [
+          { id: 'q1', type: 'open-text', text: 'Existing', weight: 50 },
+          { type: 'open-text', text: 'Brand new', weight: 50 },
+        ],
+      });
+
+      const [existing, added] = api.calls[0].body.questions;
+      // Keeping the id is what stops the answers being cascade-deleted.
+      expect(existing.id).toBe('q1');
+      expect(added).not.toHaveProperty('id');
+    });
+
+    it('surfaces how many submissions the edit invalidated', async () => {
+      const api = makeFakeApi({ 'PUT /exams/e1': { exam: { id: 'e1' }, regradeRequired: 3 } });
+      const result = await new ExamService(api, config, logger).updateExam('e1', { title: 'x' });
+
+      expect(result.regradeRequired).toBe(3);
+    });
   });
 
-  it('throws when exam not found', async () => {
-    const svc = mkService();
-    await expect(svc.updateExam('no-such-id', { title: 'X' })).rejects.toThrow(/not found/i);
-  });
-});
+  describe('lifecycle', () => {
+    it('publishes and closes through their own endpoints', async () => {
+      const api = makeFakeApi({
+        'POST /exams/e1/publish': { exam: { id: 'e1', status: 'Published' } },
+        'POST /exams/e1/close':   { exam: { id: 'e1', status: 'Closed' } },
+      });
+      const service = new ExamService(api, config, logger);
 
-// ── deleteExam ────────────────────────────────────────────────────────────────
+      expect((await service.publishExam('e1')).status).toBe('Published');
+      expect((await service.closeExam('e1')).status).toBe('Closed');
+    });
 
-describe('ExamService.deleteExam', () => {
-  it('removes the exam so it is no longer returned by getAllExams', async () => {
-    const svc  = mkService();
-    const exam = await svc.createExam(BASE_EXAM);
-    await svc.deleteExam(exam.id);
+    it('propagates an illegal transition rejected by the server', async () => {
+      const api = makeFakeApi({
+        'POST /exams/e1/close': apiError(409, 'Cannot move an exam from Draft to Closed'),
+      });
+      await expect(new ExamService(api, config, logger).closeExam('e1'))
+        .rejects.toThrow(/Cannot move an exam/);
+    });
 
-    const all = await svc.getAllExams();
-    expect(all.find((e) => e.id === exam.id)).toBeUndefined();
-  });
+    it('reports what a delete cascaded to', async () => {
+      const api = makeFakeApi({ 'DELETE /exams/e1': { deletedSubmissions: 4 } });
+      const result = await new ExamService(api, config, logger).deleteExam('e1');
 
-  it('throws when id is missing', async () => {
-    const svc = mkService();
-    await expect(svc.deleteExam('')).rejects.toThrow(/id/i);
+      expect(result.deletedSubmissions).toBe(4);
+    });
   });
 });

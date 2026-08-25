@@ -26,6 +26,8 @@ import CreateExamPage        from '../pages/teacher/CreateExamPage.jsx';
 import EditExamPage          from '../pages/teacher/EditExamPage.jsx';
 import SubmissionsPage       from '../pages/teacher/SubmissionsPage.jsx';
 import SubmissionDetailPage  from '../pages/teacher/SubmissionDetailPage.jsx';
+import GenerateExamPage      from '../pages/teacher/GenerateExamPage.jsx';
+import AnalyticsPage         from '../pages/teacher/AnalyticsPage.jsx';
 
 // Student pages (placeholder components — filled in D007)
 import StudentDashboard   from '../pages/student/StudentDashboard.jsx';
@@ -65,6 +67,12 @@ function AppRoutes() {
         } />
         <Route path="/teacher/exams/new" element={
           <ProtectedRoute role="teacher"><CreateExamPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/exams/generate" element={
+          <ProtectedRoute role="teacher"><GenerateExamPage /></ProtectedRoute>
+        } />
+        <Route path="/teacher/analytics" element={
+          <ProtectedRoute role="teacher"><AnalyticsPage /></ProtectedRoute>
         } />
         <Route path="/teacher/exams/:id/edit" element={
           <ProtectedRoute role="teacher"><EditExamPage /></ProtectedRoute>

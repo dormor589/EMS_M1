@@ -1,377 +1,162 @@
 /**
- * SubmissionService unit tests.
+ * SubmissionService tests — Milestone 2.
  *
- * Uses real StorageService (jsdom localStorage, cleared between tests),
- * real ConfigService / LoggerService singletons, and fresh MockApiService +
- * ExamService + SubmissionService instances per test suite.
- *
- * Covers:
- *   - Constructor validation
- *   - submitExam: happy path, persists correctly
- *   - submitExam: rejects exam not Published (Draft, Closed)
- *   - submitExam: rejects duplicate submission (same examId + studentId)
- *   - getSubmissionsByExam: correct filter
- *   - getSubmissionsByStudent: correct filter
- *   - getSubmissionByExamAndStudent: found / not found
- *   - gradeSubmission: updates grade, feedback, status
- *
- * Source: the milestone brief §8 — SubmissionService
- * Source: the milestone brief §5.1 — one submission per student per exam
+ * The shape of taking an exam changed: an attempt is now a server-side record
+ * with a deadline, rather than answers collected in React state and posted once.
+ * These tests cover the attempt lifecycle and the grading contract.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import MockApiService    from '../MockApiService.js';
-import ExamService       from '../ExamService.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SubmissionService from '../SubmissionService.js';
-import storage from '../StorageService.js';
-import config  from '../ConfigService.js';
-import logger  from '../LoggerService.js';
+import config from '../ConfigService.js';
+import { makeFakeApi, apiError } from './helpers/fakeApi.js';
 
-// Silence logger output in tests.
-beforeEach(() => {
-  vi.spyOn(console, 'info').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  localStorage.clear();
-});
+const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const examService = {};
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+const ATTEMPT = {
+  id: 's1', examId: 'e1', status: 'in_progress',
+  secondsRemaining: 1800, answers: [],
+};
 
-/** Build a fresh, wired service stack backed by clean localStorage. */
-function mkStack() {
-  const api  = new MockApiService(storage, config, logger);
-  const exam = new ExamService(api, config, logger);
-  const sub  = new SubmissionService(api, exam, config, logger);
-  return { api, exam, sub };
-}
+describe('SubmissionService', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-const TEACHER_ID = 'teacher-uuid-t1';
-const STUDENT_ID = 'student-uuid-s1';
+  describe('taking an exam', () => {
+    it('starts an attempt and reports the time left', async () => {
+      const api = makeFakeApi({ 'POST /exams/e1/attempt': { submission: ATTEMPT } });
+      const attempt = await new SubmissionService(api, examService, config, logger).startAttempt('e1');
 
-/** Create a Draft exam, publish it, return the Published record. */
-async function mkPublishedExam(exam) {
-  const draft = await exam.createExam({
-    title: 'Published Test Exam',
-    durationMinutes: 30,
-    createdBy: TEACHER_ID,
-    questions: [],
-  });
-  return exam.publishExam(draft.id);
-}
-
-// ── Constructor validation ────────────────────────────────────────────────────
-
-describe('SubmissionService constructor', () => {
-  it('throws when mockApi is missing', () => {
-    const { exam } = mkStack();
-    expect(() => new SubmissionService(null, exam, config, logger)).toThrow(/mockApi/);
-  });
-
-  it('throws when examService is missing', () => {
-    const { api } = mkStack();
-    expect(() => new SubmissionService(api, null, config, logger)).toThrow(/examService/);
-  });
-
-  it('throws when config is missing', () => {
-    const { api, exam } = mkStack();
-    expect(() => new SubmissionService(api, exam, null, logger)).toThrow(/config/);
-  });
-
-  it('throws when logger is missing', () => {
-    const { api, exam } = mkStack();
-    expect(() => new SubmissionService(api, exam, config, null)).toThrow(/logger/);
-  });
-});
-
-// ── submitExam — happy path ────────────────────────────────────────────────────
-
-describe('SubmissionService.submitExam — happy path', () => {
-  it('persists a submission with status "submitted"', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-
-    const result = await sub.submitExam({
-      examId:    published.id,
-      studentId: STUDENT_ID,
-      answers:   [{ questionId: 'q1', value: 'Answer text' }],
+      expect(api.calls[0]).toMatchObject({ method: 'POST', path: '/exams/e1/attempt' });
+      expect(attempt.secondsRemaining).toBe(1800);
     });
 
-    expect(result.status).toBe('submitted');
-    expect(result.examId).toBe(published.id);
-    expect(result.studentId).toBe(STUDENT_ID);
-  });
-
-  it('assigns a UUID id and submittedAt timestamp', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-
-    const result = await sub.submitExam({
-      examId:    published.id,
-      studentId: STUDENT_ID,
-      answers:   [],
+    it('propagates the server refusing a second attempt', async () => {
+      const api = makeFakeApi({
+        'POST /exams/e1/attempt': apiError(409, 'You have already submitted this exam'),
+      });
+      await expect(new SubmissionService(api, examService, config, logger).startAttempt('e1'))
+        .rejects.toThrow(/already submitted/);
     });
 
-    expect(result.id).toBeTruthy();
-    expect(typeof result.id).toBe('string');
-    expect(result.submittedAt).toBeTruthy();
-  });
+    it('autosaves answers to the attempt', async () => {
+      const api = makeFakeApi({ 'PATCH /attempts/s1/draft': { submission: ATTEMPT } });
+      const answers = [{ questionId: 'q1', value: '1' }];
 
-  it('sets grade = null and feedback = "" on initial submit', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
+      await new SubmissionService(api, examService, config, logger).saveDraft('s1', answers);
 
-    const result = await sub.submitExam({
-      examId: published.id, studentId: STUDENT_ID, answers: [],
+      expect(api.calls[0]).toEqual({
+        method: 'PATCH', path: '/attempts/s1/draft', body: { answers },
+      });
     });
 
-    expect(result.grade).toBeNull();
-    expect(result.feedback).toBe('');
-  });
+    it('marks an automatic submission so the server waives the deadline', async () => {
+      const api = makeFakeApi({
+        'POST /attempts/s1/submit': { submission: { ...ATTEMPT, status: 'submitted' } },
+      });
+      const service = new SubmissionService(api, examService, config, logger);
 
-  it('persists answers array as-is', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const answers = [
-      { questionId: 'q1', value: 'Paris' },
-      { questionId: 'q2', value: 'Blue' },
-    ];
+      await service.submitExam('s1');
+      expect(api.calls[0].body).toEqual({ auto: false });
 
-    const result = await sub.submitExam({
-      examId: published.id, studentId: STUDENT_ID, answers,
+      await service.submitExam('s1', { auto: true });
+      // The countdown fired: answers were captured before expiry even though the
+      // request lands after it.
+      expect(api.calls[1].body).toEqual({ auto: true });
     });
 
-    expect(result.answers).toHaveLength(2);
-    expect(result.answers[0].value).toBe('Paris');
+    it('requires an attempt id', async () => {
+      const api = makeFakeApi({});
+      const service = new SubmissionService(api, examService, config, logger);
+
+      await expect(service.saveDraft(undefined, [])).rejects.toThrow(/attemptId/);
+      await expect(service.submitExam(undefined)).rejects.toThrow(/attemptId/);
+    });
   });
-});
 
-// ── submitExam — status guards ────────────────────────────────────────────────
+  describe('reads', () => {
+    it('lists an exam’s submissions for its teacher', async () => {
+      const api = makeFakeApi({ 'GET /exams/e1/submissions': { submissions: [ATTEMPT] } });
+      const list = await new SubmissionService(api, examService, config, logger)
+        .getSubmissionsByExam('e1');
 
-describe('SubmissionService.submitExam — rejects non-Published exam', () => {
-  it('throws when exam is Draft', async () => {
-    const { exam, sub } = mkStack();
-    const draft = await exam.createExam({
-      title: 'Draft Exam', durationMinutes: 30, createdBy: TEACHER_ID, questions: [],
+      expect(list).toHaveLength(1);
     });
 
-    await expect(
-      sub.submitExam({ examId: draft.id, studentId: STUDENT_ID, answers: [] })
-    ).rejects.toThrow(/not Published/i);
-  });
+    it('asks for "mine" rather than trusting a client-supplied student id', async () => {
+      const api = makeFakeApi({ 'GET /submissions/mine': { submissions: [ATTEMPT] } });
 
-  it('throws when exam is Closed', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    await exam.closeExam(published.id);
+      await new SubmissionService(api, examService, config, logger)
+        .getSubmissionsByStudent('someone-elses-id');
 
-    await expect(
-      sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] })
-    ).rejects.toThrow(/not Published/i);
-  });
-
-  it('throws when exam does not exist', async () => {
-    const { sub } = mkStack();
-    await expect(
-      sub.submitExam({ examId: 'no-such-id', studentId: STUDENT_ID, answers: [] })
-    ).rejects.toThrow(/not found/i);
-  });
-});
-
-// ── submitExam — double-submission guard ──────────────────────────────────────
-
-describe('SubmissionService.submitExam — duplicate prevention', () => {
-  it('throws "Already submitted" on second submit for same (examId, studentId)', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-
-    // First submit — succeeds.
-    await sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] });
-
-    // Second submit — must throw.
-    await expect(
-      sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] })
-    ).rejects.toThrow('Already submitted');
-  });
-
-  it('allows a DIFFERENT student to submit the same exam', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-
-    await sub.submitExam({ examId: published.id, studentId: 'student-A', answers: [] });
-    // Different student — should succeed.
-    const s2 = await sub.submitExam({ examId: published.id, studentId: 'student-B', answers: [] });
-    expect(s2.studentId).toBe('student-B');
-  });
-});
-
-// ── getSubmissionsByExam ──────────────────────────────────────────────────────
-
-describe('SubmissionService.getSubmissionsByExam', () => {
-  it('returns only submissions for the specified exam', async () => {
-    const { exam, sub } = mkStack();
-    const e1 = await mkPublishedExam(exam);
-    const e2 = await exam.createExam({
-      title: 'Exam 2', durationMinutes: 30, createdBy: TEACHER_ID,
-    });
-    const pe2 = await exam.publishExam(e2.id);
-
-    await sub.submitExam({ examId: e1.id,   studentId: 'sA', answers: [] });
-    await sub.submitExam({ examId: pe2.id,  studentId: 'sA', answers: [] });
-
-    const results = await sub.getSubmissionsByExam(e1.id);
-    expect(results).toHaveLength(1);
-    expect(results[0].examId).toBe(e1.id);
-  });
-
-  it('returns empty array when no submissions for that exam', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const results = await sub.getSubmissionsByExam(published.id);
-    expect(results).toHaveLength(0);
-  });
-
-  it('throws when examId is missing', async () => {
-    const { sub } = mkStack();
-    await expect(sub.getSubmissionsByExam('')).rejects.toThrow(/examId/i);
-  });
-});
-
-// ── getSubmissionsByStudent ───────────────────────────────────────────────────
-
-describe('SubmissionService.getSubmissionsByStudent', () => {
-  it('returns only submissions by the specified student', async () => {
-    const { exam, sub } = mkStack();
-    const e1 = await mkPublishedExam(exam);
-
-    await sub.submitExam({ examId: e1.id, studentId: 'alice', answers: [] });
-    await sub.submitExam({ examId: e1.id, studentId: 'bob',   answers: [] });
-
-    const results = await sub.getSubmissionsByStudent('alice');
-    expect(results).toHaveLength(1);
-    expect(results[0].studentId).toBe('alice');
-  });
-
-  it('returns empty array when student has no submissions', async () => {
-    const { sub } = mkStack();
-    const results = await sub.getSubmissionsByStudent('nobody');
-    expect(results).toHaveLength(0);
-  });
-
-  it('throws when studentId is missing', async () => {
-    const { sub } = mkStack();
-    await expect(sub.getSubmissionsByStudent('')).rejects.toThrow(/studentId/i);
-  });
-});
-
-// ── getSubmissionByExamAndStudent ─────────────────────────────────────────────
-
-describe('SubmissionService.getSubmissionByExamAndStudent', () => {
-  it('returns the submission when found', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    await sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] });
-
-    const found = await sub.getSubmissionByExamAndStudent(published.id, STUDENT_ID);
-    expect(found).not.toBeNull();
-    expect(found.examId).toBe(published.id);
-    expect(found.studentId).toBe(STUDENT_ID);
-  });
-
-  it('returns null when no submission exists for the pair', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const found = await sub.getSubmissionByExamAndStudent(published.id, STUDENT_ID);
-    expect(found).toBeNull();
-  });
-});
-
-// ── gradeSubmission ───────────────────────────────────────────────────────────
-
-describe('SubmissionService.gradeSubmission', () => {
-  it('updates grade and feedback, sets status to "graded"', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const s = await sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] });
-
-    const graded = await sub.gradeSubmission(s.id, { grade: 85, feedback: 'Good work!' });
-    expect(graded.grade).toBe(85);
-    expect(graded.feedback).toBe('Good work!');
-    expect(graded.status).toBe('graded');
-  });
-
-  it('throws when submission id is missing', async () => {
-    const { sub } = mkStack();
-    await expect(sub.gradeSubmission('', { grade: 90 })).rejects.toThrow(/id/i);
-  });
-
-  it('throws when submission not found', async () => {
-    const { sub } = mkStack();
-    await expect(
-      sub.gradeSubmission('no-such-id', { grade: 90 })
-    ).rejects.toThrow(/not found/i);
-  });
-});
-
-// ── input validation ──────────────────────────────────────────────────────────
-
-describe('SubmissionService — input validation', () => {
-  it('submitExam throws when examId is missing', async () => {
-    const { sub } = mkStack();
-    await expect(
-      sub.submitExam({ examId: '', studentId: STUDENT_ID, answers: [] })
-    ).rejects.toThrow(/examId/i);
-  });
-
-  it('submitExam throws when studentId is missing', async () => {
-    const { sub } = mkStack();
-    await expect(
-      sub.submitExam({ examId: 'some-id', studentId: '', answers: [] })
-    ).rejects.toThrow(/studentId/i);
-  });
-});
-
-// ── getSubmissionById (D010) ───────────────────────────────────────────────────
-
-describe('SubmissionService.getSubmissionById', () => {
-  it('returns the submission when it exists', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const created = await sub.submitExam({
-      examId: published.id,
-      studentId: STUDENT_ID,
-      answers: [],
+      // Identity comes from the token, so one student cannot read another's work.
+      expect(api.calls[0].path).toBe('/submissions/mine');
     });
 
-    const found = await sub.getSubmissionById(created.id);
-    expect(found).not.toBeNull();
-    expect(found.id).toBe(created.id);
-    expect(found.examId).toBe(published.id);
-    expect(found.studentId).toBe(STUDENT_ID);
+    it('finds the caller’s submission for one exam, or null', async () => {
+      const api = makeFakeApi({ 'GET /submissions/mine': { submissions: [ATTEMPT] } });
+      const service = new SubmissionService(api, examService, config, logger);
+
+      expect((await service.getSubmissionByExamAndStudent('e1'))?.id).toBe('s1');
+      expect(await service.getSubmissionByExamAndStudent('other')).toBeNull();
+    });
+
+    it('returns null for a missing submission rather than throwing', async () => {
+      const api = makeFakeApi({ 'GET /submissions/gone': apiError(404, 'Submission not found') });
+      expect(await new SubmissionService(api, examService, config, logger)
+        .getSubmissionById('gone')).toBeNull();
+    });
   });
 
-  it('returns null when the submission does not exist', async () => {
-    const { sub } = mkStack();
-    const result = await sub.getSubmissionById('non-existent-id');
-    expect(result).toBeNull();
-  });
+  describe('grading', () => {
+    it('sends per-question scores and keeps the grade a draft by default', async () => {
+      const api = makeFakeApi({
+        'PATCH /submissions/s1/grade': { submission: { id: 's1', grade: 88, status: 'ai_graded' } },
+      });
 
-  it('throws when id is missing', async () => {
-    const { sub } = mkStack();
-    await expect(sub.getSubmissionById('')).rejects.toThrow(/id/i);
-  });
+      await new SubmissionService(api, examService, config, logger).gradeSubmission('s1', {
+        answers: [{ questionId: 'q2', score: '80', feedback: 'Clear.' }],
+        feedback: 'Good work.',
+      });
 
-  it('gradeSubmission — grade persists and is retrievable via getSubmissionById', async () => {
-    const { exam, sub } = mkStack();
-    const published = await mkPublishedExam(exam);
-    const s = await sub.submitExam({ examId: published.id, studentId: STUDENT_ID, answers: [] });
+      const body = api.calls[0].body;
+      expect(body.answers[0]).toEqual({ questionId: 'q2', score: 80, feedback: 'Clear.' });
+      expect(body.publish).toBe(false);
+    });
 
-    await sub.gradeSubmission(s.id, { grade: 72, feedback: 'Solid effort.' });
+    it('omits score entirely when none was given, so it is not read as zero', async () => {
+      const api = makeFakeApi({
+        'PATCH /submissions/s1/grade': { submission: { id: 's1', grade: 0 } },
+      });
 
-    const reloaded = await sub.getSubmissionById(s.id);
-    expect(reloaded.grade).toBe(72);
-    expect(reloaded.feedback).toBe('Solid effort.');
-    expect(reloaded.status).toBe('graded');
+      await new SubmissionService(api, examService, config, logger).gradeSubmission('s1', {
+        answers: [{ questionId: 'q1', feedback: 'Marked from the answer key.' }],
+      });
+
+      expect(api.calls[0].body.answers[0]).not.toHaveProperty('score');
+    });
+
+    it('publishes when asked', async () => {
+      const api = makeFakeApi({
+        'PATCH /submissions/s1/grade': { submission: { id: 's1', status: 'graded' } },
+      });
+
+      await new SubmissionService(api, examService, config, logger)
+        .gradeSubmission('s1', { answers: [], publish: true });
+
+      expect(api.calls[0].body.publish).toBe(true);
+    });
+
+    it('releases an existing draft grade unchanged', async () => {
+      const api = makeFakeApi({
+        'POST /submissions/s1/publish': { submission: { id: 's1', status: 'graded' } },
+      });
+
+      const result = await new SubmissionService(api, examService, config, logger)
+        .publishGrade('s1');
+
+      expect(api.calls[0].path).toBe('/submissions/s1/publish');
+      expect(result.status).toBe('graded');
+    });
   });
 });

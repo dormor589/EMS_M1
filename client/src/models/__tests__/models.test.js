@@ -39,8 +39,17 @@ describe('User', () => {
     expect(() => new User({ ...valid, email: '' })).toThrow(/email/);
   });
 
-  it('throws when password is missing', () => {
-    expect(() => new User({ ...valid, password: undefined })).toThrow(/password/);
+  it('does NOT require a password', () => {
+    // Milestone 2: a user is built from the API response, which never carries a
+    // password. Only the server holds one, and only as a bcrypt hash.
+    const user = new User({ ...valid, password: undefined });
+    expect(user.email).toBe(valid.email);
+    expect(user.password).toBeUndefined();
+  });
+
+  it('omits the password key entirely from toJSON when there is none', () => {
+    const json = new User({ ...valid, password: undefined }).toJSON();
+    expect('password' in json).toBe(false);
   });
 
   it('throws when role is missing', () => {

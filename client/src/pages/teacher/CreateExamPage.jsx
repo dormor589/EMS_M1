@@ -7,7 +7,7 @@
  *   • durationMinutes (required, > 0)
  *   • questions — dynamic list; at least 1 question required on submit.
  *     Each question: type (MC | open-text), text, options list (MC only),
- *     correctAnswer, points.
+ *     correctAnswer, weight.
  *
  * No business logic in JSX: validation and persistence handled by
  * ExamService.createExam().
@@ -137,32 +137,40 @@ function QuestionEditor({ question, index, onChange, onRemove }) {
         </div>
       )}
 
-      {/* Correct answer */}
+      {/* Correct answer + weight */}
       <div className="ems-form__row">
-        <div className="ems-form__group">
-          <label className="ems-form__label">
-            {question.type === 'multiple-choice'
-              ? 'Correct Answer (option text)'
-              : 'Model Answer (optional)'}
-          </label>
-          <input
-            className="ems-form__input"
-            value={question.correctAnswer}
-            onChange={(e) => field('correctAnswer', e.target.value)}
-            placeholder={
-              question.type === 'multiple-choice' ? 'Paste the correct option…' : 'Model answer…'
-            }
-          />
-        </div>
-        <div className="ems-form__group" style={{ maxWidth: '90px' }}>
-          <label className="ems-form__label">Points</label>
+        {question.type === 'multiple-choice' && (
+          <div className="ems-form__group">
+            <label className="ems-form__label">Correct answer</label>
+            {/* A dropdown over the options, not free text: the server stores the
+                option INDEX, and picking from the list makes a mismatch between
+                the key and the options impossible. */}
+            <select
+              className="ems-form__input"
+              value={question.correctAnswer}
+              onChange={(e) => field('correctAnswer', e.target.value)}
+            >
+              <option value="">Choose the correct option…</option>
+              {(question.options || []).map((opt, oi) => (
+                <option key={oi} value={String(oi)}>
+                  {opt.trim() === '' ? `Option ${oi + 1}` : opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="ems-form__group ems-max-160">
+          <label className="ems-form__label">Weight</label>
           <input
             className="ems-form__input"
             type="number"
             min={1}
-            value={question.points}
-            onChange={(e) => field('points', Number(e.target.value) || 1)}
+            max={100}
+            value={question.weight}
+            onChange={(e) => field('weight', Number(e.target.value) || 1)}
           />
+          <small className="ems-form__hint">share of the grade</small>
         </div>
       </div>
     </div>
@@ -173,7 +181,7 @@ function QuestionEditor({ question, index, onChange, onRemove }) {
 
 /** Build a blank question for the initial state. */
 function blankQuestion() {
-  return { type: 'multiple-choice', text: '', options: ['', ''], correctAnswer: '', points: 1 };
+  return { type: 'multiple-choice', text: '', options: ['', ''], correctAnswer: '', weight: 10 };
 }
 
 function CreateExamPage() {
@@ -278,7 +286,7 @@ function CreateExamPage() {
         </div>
 
         {/* Duration */}
-        <div className="ems-form__group" style={{ maxWidth: '200px' }}>
+        <div className="ems-form__group ems-max-200">
           <label className="ems-form__label" htmlFor="duration">
             Duration (minutes) *
           </label>
@@ -311,9 +319,8 @@ function CreateExamPage() {
 
           <button
             type="button"
-            className="ems-btn ems-btn--secondary"
+            className="ems-btn ems-btn--secondary ems-mt-sm"
             onClick={addQuestion}
-            style={{ marginTop: '0.5rem' }}
           >
             + Add Question
           </button>

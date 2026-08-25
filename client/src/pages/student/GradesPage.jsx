@@ -89,7 +89,7 @@ function GradesPage() {
               {rows.map(({ submission: s, examTitle }) => (
                 <tr key={s.id}>
                   <td>{examTitle}</td>
-                  <td style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                  <td className="ems-td-muted">
                     {new Date(s.submittedAt).toLocaleString()}
                   </td>
                   <td>
@@ -106,9 +106,9 @@ function GradesPage() {
                   <td>
                     {s.grade !== null && s.grade !== undefined
                       ? <strong>{s.grade}</strong>
-                      : <span style={{ color: '#94a3b8' }}>Not yet graded</span>}
+                      : <span className="ems-faint">Not yet graded</span>}
                   </td>
-                  <td style={{ color: '#64748b', fontSize: '0.875rem' }}>
+                  <td className="ems-td-muted">
                     {s.feedback || '—'}
                   </td>
                 </tr>
